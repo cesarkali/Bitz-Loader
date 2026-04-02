@@ -1,0 +1,198 @@
+/* ==========================================================================
+   Estilos base do corpo da página
+   ========================================================================== */
+body {
+  background-color: #ffffff;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   Contêiner principal que segura a logo e a órbita na mesma posição (grid)
+   ========================================================================== */
+.loader-container {
+  display: grid;
+  place-items: center;
+}
+
+/* ==========================================================================
+   Estilização e Animação da Logo Textual (bitz)
+   ========================================================================== */
+.logo-bitz-texto {
+  grid-area: 1 / 1;
+  position: relative;
+  z-index: 10;
+  width: 150px;
+  height: auto;
+
+  filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 10px rgba(66, 133, 244, 0.4));
+
+  /* 
+     Onde a animação começa: a propriedade "animation" abaixo.
+     Sintaxe: [nome-da-animação] [duração] [curva-de-tempo] [vezes-que-repete] [DELAY/WAIT]
+     
+     Nesse caso: 
+     - "2s" (segundo valor) é o tempo que ela demora pra acontecer.
+     - "2s" (último valor) é o DELAY (espera). 
+       Isso quer dizer que essas animações vão esperar 2 segundos após a tela carregar para começarem.
+  */
+  animation:
+    text-pulse 2s ease-in-out infinite 2s,
+    logo-glow 2.5s ease-in-out infinite 2s;
+}
+
+/* ==========================================================================
+   Container fantasma (orbit-wrapper) que vai girar em volta da logo
+   O símbolo azul fica dentro dele para pegar carona nesse giro
+   ========================================================================== */
+.orbit-wrapper {
+  grid-area: 1 / 1;
+  width: 1px;
+  height: 1px;
+
+  /* 
+     Aqui temos a rotação do container (órbita).
+     Ele espera "1.8s" (delay no fim) para começar o giro de órbita (orbit-spin).
+  */
+  animation: orbit-spin 1.2s linear infinite 1.8s;
+}
+
+/* ==========================================================================
+   Estilização e Animações do Símbolo Azul (que funciona como loader)
+   ========================================================================== */
+.simbolo-loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: auto;
+
+  filter: drop-shadow(0 0 15px rgba(66, 133, 244, 0.6)) drop-shadow(0 0 5px rgba(66, 133, 244, 0.4));
+
+  /* Estado inicial do elemento na tela, antes de qualquer animação ditar regras */
+  transform: translate(12px, 35px) scale(0.5);
+
+  /*
+     LISTA DE ANIMAÇÕES DO SÍMBOLO:
+     É aqui que você controla "quem começa, quando começa, e quando termina".
+     
+     1. move-to-orbit (Asaída que configuramos):
+        - Duração: 1s
+        - Delay (tempo de espera/wait inicial): 1s.
+        - forwards: faz ele manter o estado em "100%" quando ela acabar e não resetar pro estado base.
+        
+     2. pulse e symbol-glow:
+        - Duração: 2s
+        - Delay (tempo de espera/wait inicial): 2s.
+        - infinite: ficam em loop eterno.
+        
+     COMO ALTERAR A SAÍDA (WAIT):
+     Basta mudar o segundo '1s' da linha do "move-to-orbit" abaixo para o tempo que quiser (ex: 3s).
+  */
+  animation:
+    move-to-orbit 1s ease-in-out forwards 1s,
+    pulse 2s ease-in-out infinite 2s,
+    symbol-glow 2s ease-in-out infinite 2s;
+}
+
+/* ==========================================================================
+   KEYFRAMES: O roteiro das animações passo a passo
+   ========================================================================== */
+
+/* 
+   1. Saída do Símbolo. 
+   Ele usa as porcentagens como linha do tempo (0% = começo, 100% = fim do '1s' de duração da animação). 
+*/
+@keyframes move-to-orbit {
+  0% {
+    /* Ponto de partida */
+    transform: translate(-60px, -7px) scale(0.5);
+    opacity: 1;
+  }
+
+  50% {
+    /* Meio do caminho: Onde ele dá aquela margem para não bater no texto */
+    transform: translate(-75px, -10px) scale(0.6) rotate(90deg);
+    opacity: 1;
+  }
+
+  100% {
+    /* Ponto de chegada: Ele sobe até o nível da gravidade zero no topo (-75px de altura) */
+    transform: translate(-50%, -75px) scale(1) rotate(180deg);
+    opacity: 1;
+  }
+}
+
+/* 2. Rotação infinita e constante da órbita transparente (faz tudo girar no entorno) */
+@keyframes orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 3. Pulso sutil no tamanho da logo (Aumenta de scale 1.0 para 1.1 e volta ao normal) */
+@keyframes text-pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 4. O símbolo também encolhe e cresce de tamanho conforme viaja pela órbita */
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -75px) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+
+  50% {
+    transform: translate(-50%, -75px) scale(0.1) rotate(0deg);
+    opacity: 0.3;
+  }
+
+  100% {
+    transform: translate(-50%, -75px) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* 5. Efeito de brilho acendendo e apagando para o símbolo azul */
+@keyframes symbol-glow {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 15px rgba(66, 133, 244, 0.6)) drop-shadow(0 0 5px rgba(66, 133, 244, 0.4));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 25px rgba(66, 133, 244, 0.9)) drop-shadow(0 0 10px rgba(102, 126, 234, 0.7)) drop-shadow(0 0 20px rgba(118, 75, 162, 0.5));
+  }
+}
+
+/* 6. Efeito de brilho acendendo e apagando para a logo texto principal */
+@keyframes logo-glow {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 10px rgba(66, 133, 244, 0.4));
+  }
+
+  50% {
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 15px rgba(66, 133, 244, 0.7)) drop-shadow(0 0 8px rgba(102, 126, 234, 0.5));
+  }
+}
