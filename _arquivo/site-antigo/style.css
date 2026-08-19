@@ -1,0 +1,195 @@
+/* ==========================================================================
+   Bitz Loader — anel orbital contínuo (estilo Android / Gemini)
+   ========================================================================== */
+
+:root {
+  --bitz-blue: #0057d9;
+  --bitz-blue-soft: rgba(0, 87, 217, 0.55);
+  --bitz-orbit-duration: 2.6s;
+  --bitz-size: min(88vw, 620px);
+}
+
+body {
+  background-color: #ffffff;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   Contêiner principal
+   ========================================================================== */
+.loader-container {
+  display: grid;
+  place-items: center;
+}
+
+.bitz-loader {
+  width: var(--bitz-size);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bitz-loader__scene {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+/* ==========================================================================
+   Sombra de contato no "chão", só pra dar profundidade sutil
+   ========================================================================== */
+.bitz-loader__ground {
+  fill: #000000;
+  opacity: 0.08;
+  filter: blur(6px);
+}
+
+/* ==========================================================================
+   Wordmark ("bitz" + "all in one") — fica parado, com leve respiração e um
+   acabamento em gradiente + sombra suave pra lembrar o look 3D do vídeo de
+   referência sem precisar de motor 3D de verdade.
+   ========================================================================== */
+.bitz-loader__wordmark {
+  transform-origin: 531.5px 288.25px;
+  animation: bitz-breathe 2.6s ease-in-out infinite;
+}
+
+.bitz-loader__bitz {
+  fill: url(#bitzBlackGrad);
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25));
+}
+
+.bitz-loader__allinone {
+  fill: url(#bitzBlueGrad);
+  filter: drop-shadow(0 3px 6px rgba(0, 87, 217, 0.25));
+}
+
+@keyframes bitz-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.015); }
+}
+
+/* ==========================================================================
+   Geometria de referência: a <path id="bitzOrbitPath"> em <defs> é só uma
+   elipse fixa usada pelos dois <use> abaixo. Ela não tem fill/stroke
+   próprios de propósito (nem via atributo, nem via CSS): um valor
+   especificado nela — de QUALQUER força — venceria a herança de fill/
+   stroke que cada <use> tenta passar pro clone interno que ele gera,
+   e o traço sumiria (foi exatamente esse bug: um #bitzOrbitPath{stroke:
+   none} aqui vazava pro clone e apagava as duas cópias). Como <defs>
+   nunca renderiza os próprios filhos, não existe risco dela "vazar"
+   visível sozinha — não precisa (e não pode) ser escondida. Ela NUNCA
+   gira como grupo (girar uma elipse não-circular como forma rígida
+   distorceria o traçado); quem se move é o TRECHO VISÍVEL, deslizando
+   sobre essa elipse fixa via stroke-dashoffset. pathLength="100" normaliza
+   tudo em "%", então os números abaixo não dependem do tamanho real dela.
+
+   O ponto M do "d" (início do path, offset=0) fica propositalmente do
+   lado esquerdo, bem perto de onde o símbolo original descansa dentro do
+   "b" — é dali que o arco nasce.
+   ========================================================================== */
+
+/* Símbolo parado, na posição exata do Original.webp. É ele que o usuário
+   vê no primeiro frame; conforme o anel nasce no mesmo canto, este aqui
+   se desfaz (crossfade), então nunca existe uma "troca" abrupta. */
+.bitz-loader__flag-rest {
+  fill: url(#bitzBlueGrad);
+  filter: drop-shadow(0 0 10px rgba(0, 87, 217, 0.5));
+  animation: bitz-flag-fade 0.5s ease-in forwards;
+}
+
+@keyframes bitz-flag-fade {
+  to { opacity: 0; }
+}
+
+/* Grupo do anel: só cuida do fade-in geral (crossfade com o flag-rest).
+   Cada camada (glow/arco) cuida da própria animação de forma/posição. */
+.bitz-loader__orbit {
+  opacity: 0;
+  animation: bitz-orbit-fadein 0.55s ease-out forwards 0.05s;
+}
+
+@keyframes bitz-orbit-fadein {
+  to { opacity: 1; }
+}
+
+/* Brilho difuso atrás do arco (glow), mesma geometria, mais grosso e borrado */
+.bitz-loader__orbit-glow {
+  fill: none;
+  stroke: var(--bitz-blue);
+  stroke-width: 30;
+  stroke-linecap: round;
+  stroke-dashoffset: 0;
+  opacity: 0.32;
+  filter: blur(11px);
+  animation:
+    bitz-orbit-grow 0.6s cubic-bezier(0.3, 0, 0.2, 1) 0.05s forwards,
+    bitz-orbit-spin var(--bitz-orbit-duration) linear 0.65s infinite;
+}
+
+/* Arco nítido em cima, o "cometa" que de fato se vê orbitando */
+.bitz-loader__orbit-arc {
+  fill: none;
+  stroke: url(#bitzBlueGrad);
+  stroke-width: 17;
+  stroke-linecap: round;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 87, 217, 0.35));
+  animation:
+    bitz-orbit-grow 0.6s cubic-bezier(0.3, 0, 0.2, 1) 0.05s forwards,
+    bitz-orbit-spin var(--bitz-orbit-duration) linear 0.65s infinite;
+}
+
+/* ==========================================================================
+   Animação em duas partes, sem nenhuma sobreposição de fase (é isso que
+   antes deixava o movimento "engasgado"/vai-e-volta: o comprimento do
+   arco pulsava — crescia e encolhia — o tempo todo, o que lê como
+   hesitação). Agora:
+
+   1) bitz-orbit-grow (uma vez só, 0.6s): o traço nasce do zero exatamente
+      no ponto de partida do path (offset fixo em 0 = canto esquerdo, onde
+      o símbolo original descansa) e se estende até o comprimento final.
+      É a parte "se constrói", igual o spinner do Google quando aparece.
+
+   2) bitz-orbit-spin (infinita, começa quando a Nº1 termina): comprimento
+      fica fixo, só o stroke-dashoffset anda, sempre na mesma direção, com
+      "linear" (velocidade constante, sem easing) — gira pra sempre sem
+      acelerar/desacelerar, sem pulsar. Isso é o que garante "movimento
+      contínuo" de verdade.
+   ========================================================================== */
+@keyframes bitz-orbit-grow {
+  from { stroke-dasharray: 0 100; }
+  to   { stroke-dasharray: 56 44; }
+}
+
+@keyframes bitz-orbit-spin {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -100; }
+}
+
+/* ==========================================================================
+   Acessibilidade: reduz/achata a animação para quem pede menos movimento
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .bitz-loader__wordmark {
+    animation: none;
+  }
+  .bitz-loader__flag-rest {
+    animation: none;
+    opacity: 0;
+  }
+  .bitz-loader__orbit {
+    animation: none;
+    opacity: 1;
+  }
+  .bitz-loader__orbit-glow,
+  .bitz-loader__orbit-arc {
+    animation-duration: 0.6s, 8s;
+  }
+}

@@ -1,37 +1,854 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loader Bitz</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bitz · All in One — Loader</title>
+<style>
+/* ============================================================
+   BITZ · ALL IN ONE — LOADER DE HOSPITALIDADE
+   100% CSS, ciclo de 15s em loop perfeito, com ou sem o cenário.
+   Fases: desenho da logo -> assinatura -> jornada -> retorno -> logo original
+   ============================================================ */
+
+:root{
+  --T: 15s;                 /* duração do ciclo completo (vale para os dois modos) */
+  --b1:#0057D9;             /* azul Bitz oficial */
+  --b2:#3b86ff;
+  --b3:#8fc0ff;
+  --lift: 195px;            /* quanto a logo sobe na fase da jornada */
+}
+
+/* ---- MODO SOLO: só a logo + o fundo animado ----
+   Mesmo ciclo de 15s do modo cenário; a logo apenas permanece
+   centralizada em tamanho cheio, sem subir nem reduzir. */
+html[data-scene="off"] .world-wrap{ display:none }
+html[data-scene="off"] .brand-move{ animation:none }
+
+html[data-theme="dark"]{
+  --bg0:#03050c; --bg1:#070d1c;
+  --ink:#eef4ff;
+  --sub:rgba(220,233,255,.55);
+  --line:rgba(143,192,255,.20);
+  --glowA:rgba(0,87,217,.42);
+  --glowB:rgba(59,134,255,.26);
+  --grid:rgba(143,192,255,.16);
+  --pane:rgba(143,192,255,.05);
+  --halo:rgba(0,87,217,.38);
+  --neon:#eaf3ff;
+  --star:1;
+}
+html[data-theme="light"]{
+  --bg0:#e9eef7; --bg1:#ffffff;
+  --ink:#000000;
+  --sub:rgba(8,24,54,.55);
+  --line:rgba(0,87,217,.20);
+  --glowA:rgba(0,87,217,.18);
+  --glowB:rgba(59,134,255,.14);
+  --grid:rgba(0,87,217,.16);
+  --pane:rgba(0,87,217,.04);
+  --halo:rgba(0,87,217,.12);
+  --neon:#0057D9;
+  --star:0;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg1);
+  color:var(--ink);
+  font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  display:grid; place-items:center;
+  overflow:hidden;
+}
+/* atmosfera de fundo */
+body::before{
+  content:""; position:fixed; inset:-10%;
+  background:
+    radial-gradient(60% 45% at 50% 6%,  var(--glowA), transparent 62%),
+    radial-gradient(70% 50% at 50% 104%, var(--glowB), transparent 62%),
+    radial-gradient(40% 40% at 12% 62%, var(--glowB), transparent 65%),
+    radial-gradient(40% 40% at 88% 38%, var(--glowB), transparent 65%),
+    var(--bg0);
+  animation: breathe 15s ease-in-out infinite;
+}
+@keyframes breathe{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+
+/* vinheta + textura fina */
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px),
+    radial-gradient(120% 90% at 50% 50%, transparent 45%, rgba(0,0,0,.55) 100%);
+  opacity:var(--star);
+}
+
+/* ---------- palco ---------- */
+.stage{
+  position:relative;
+  width:min(1120px, 94vw);
+  height:min(660px, 88vh);
+  isolation:isolate;
+}
+
+/* campo de estrelas */
+.stars{
+  position:absolute; inset:0; opacity:var(--star); pointer-events:none;
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 18%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 27% 9%,  #cfe2ff, transparent),
+    radial-gradient(1.8px 1.8px at 44% 22%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 63% 12%, #bcd8ff, transparent),
+    radial-gradient(1.5px 1.5px at 78% 24%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 91% 15%, #cfe2ff, transparent),
+    radial-gradient(1.3px 1.3px at 8% 41%,  #fff, transparent),
+    radial-gradient(1.1px 1.1px at 34% 36%, #bcd8ff, transparent),
+    radial-gradient(1.4px 1.4px at 70% 40%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 96% 46%, #cfe2ff, transparent);
+  animation: twinkle 3s ease-in-out infinite;
+}
+@keyframes twinkle{ 0%,100%{opacity:calc(var(--star) * .75)} 50%{opacity:calc(var(--star) * .3)} }
+
+/* ---------- LOGO ---------- */
+.brand-move{
+  position:absolute; left:50%; top:50%;
+  transform:translate(-50%,-50%);
+  animation: brandMove var(--T) cubic-bezier(.65,.02,.25,1) infinite;
+  z-index:3;
+}
+@keyframes brandMove{
+  0%, 26%   { transform:translate(-50%,-50%) scale(1); }
+  33%, 75%  { transform:translate(-50%, calc(-50% - var(--lift))) scale(.5); }
+  83%, 100% { transform:translate(-50%,-50%) scale(1); }
+}
+
+.brand-float{ position:relative; animation: dissolve var(--T) linear infinite; }
+
+/* halo que respira atrás da marca */
+.halo{
+  position:absolute; left:50%; top:50%;
+  width:82%; height:170%;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(50% 50% at 50% 50%, var(--halo), transparent 70%);
+  filter:blur(22px);
+  pointer-events:none; z-index:-1;
+  animation: halo 5s ease-in-out infinite;
+}
+@keyframes halo{
+  0%,100%{ opacity:.55; transform:translate(-50%,-50%) scale(1) }
+  50%    { opacity:.95; transform:translate(-50%,-50%) scale(1.08) }
+}
+@keyframes dissolve{
+  0%, 92%   { filter:blur(0px); transform:scale(1); }
+  97%       { filter:blur(0px); transform:scale(1.03); }
+  100%      { filter:blur(7px); transform:scale(1.09); }
+}
+
+.brand{
+  display:block;
+  width:min(720px, 76vw);
+  height:auto;
+  overflow:visible;
+  filter:drop-shadow(0 0 26px rgba(0,87,217,.35));
+}
+
+/* ---- flutuação individual ----
+   Cada peça da marca respira no seu próprio compasso: --p define a fase,
+   --a a amplitude e --r a inclinação máxima. O período de 5s cabe 3x
+   em --T, então o loop de 15s continua fechando sem salto.
+   O símbolo e sua barra compartilham fase para não se descolarem;
+   o pingo acompanha a fase do "i" com amplitude maior. */
+.fl{
+  transform-box:fill-box; transform-origin:50% 50%;
+  animation: bob 5s ease-in-out infinite;
+  animation-delay:var(--p,0s);
+}
+@keyframes bob{
+  0%,100%{ transform:translateY(0) rotate(0deg) }
+  26%    { transform:translateY(calc(var(--a,2.5) * -1px)) rotate(var(--r,0deg)) }
+  52%    { transform:translateY(calc(var(--a,2.5) * .3px)) rotate(0deg) }
+  76%    { transform:translateY(calc(var(--a,2.5) * -.5px)) rotate(calc(var(--r,0deg) * .45)) }
+}
+
+/* traço que "escreve" a logo */
+.s{
+  fill:none;
+  stroke:var(--b2);
+  stroke-width:2.2;
+  stroke-linecap:round; stroke-linejoin:round;
+  stroke-dasharray:1; stroke-dashoffset:1;
+  opacity:0;
+  animation: draw var(--T) cubic-bezier(.6,.05,.3,1) infinite;
+  animation-delay:calc(var(--d,0) * var(--T));
+  filter:drop-shadow(0 0 6px var(--b2));
+}
+@keyframes draw{
+  0%   { stroke-dashoffset:1; opacity:0 }
+  1%   { stroke-dashoffset:1; opacity:1 }
+  11%  { stroke-dashoffset:0; opacity:1 }
+  17%  { stroke-dashoffset:0; opacity:.55 }
+  21%,100%{ stroke-dashoffset:0; opacity:0 }
+}
+
+/* preenchimento final: a logo original */
+.f{
+  opacity:0;
+  transform-box:fill-box; transform-origin:50% 50%;
+  animation: ink var(--T) cubic-bezier(.2,.8,.2,1) infinite;
+  animation-delay:calc(var(--d,0) * var(--T));
+}
+@keyframes ink{
+  0%,4%  { opacity:0; transform:translateY(7px) scale(.97) }
+  11%    { opacity:1; transform:translateY(0) scale(1) }
+  90%    { opacity:1; transform:translateY(0) scale(1) }
+  97%,100%{ opacity:0; transform:translateY(-5px) scale(1.03) }
+}
+
+.ink-black{ fill:var(--ink) }
+.ink-blue { fill:var(--b1) }
+
+/* pingo do "i" cai do alto */
+.f-dot{
+  animation: ink var(--T) cubic-bezier(.2,.8,.2,1) infinite, drop var(--T) cubic-bezier(.3,1.5,.5,1) infinite;
+  animation-delay:calc(var(--d,0) * var(--T)), calc(var(--d,0) * var(--T));
+}
+@keyframes drop{
+  0%,4% { transform:translateY(-70px) }
+  12%   { transform:translateY(0) }
+  100%  { transform:translateY(0) }
+}
+
+/* barra azul do símbolo desliza para o lugar */
+.f-bar{
+  animation: ink var(--T) cubic-bezier(.2,.8,.2,1) infinite, slide var(--T) cubic-bezier(.2,.9,.2,1) infinite;
+  animation-delay:calc(var(--d,0) * var(--T)), calc(var(--d,0) * var(--T));
+}
+@keyframes slide{
+  0%,5% { transform:translateX(-46px) }
+  13%   { transform:translateX(0) }
+  100%  { transform:translateX(0) }
+}
+
+/* brilho que varre a logo — uma vez na assinatura, outra no meio do ciclo */
+.sweep{ animation: sweep var(--T) ease-in-out infinite; }
+@keyframes sweep{
+  0%, 17% { transform:translateX(-260px); opacity:0 }
+  19%     { opacity:1 }
+  27%     { opacity:1 }
+  29%,100%{ transform:translateX(760px); opacity:0 }
+}
+.sweep2{ animation: sweep2 var(--T) ease-in-out infinite; }
+@keyframes sweep2{
+  0%, 53% { transform:translateX(-260px); opacity:0 }
+  56%     { opacity:.6 }
+  64%     { opacity:.6 }
+  67%,100%{ transform:translateX(760px); opacity:0 }
+}
+
+/* filete que separa a marca da assinatura */
+.rule{
+  stroke:var(--b1); stroke-width:2.4; stroke-linecap:round;
+  stroke-dasharray:98; stroke-dashoffset:98;
+  animation: rule var(--T) cubic-bezier(.2,.9,.2,1) infinite;
+}
+@keyframes rule{
+  0%,10% { stroke-dashoffset:98; opacity:0 }
+  12%    { stroke-dashoffset:80; opacity:1 }
+  18%    { stroke-dashoffset:0; opacity:1 }
+  90%    { stroke-dashoffset:0; opacity:1 }
+  96%,100%{ stroke-dashoffset:0; opacity:0 }
+}
+
+/* flash de energia */
+.pulse{
+  position:absolute; left:50%; top:50%;
+  width:180px; height:180px; margin:-90px 0 0 -90px;
+  border-radius:50%;
+  border:2px solid var(--b2);
+  opacity:0; pointer-events:none;
+  animation: pulse var(--T) cubic-bezier(.1,.7,.3,1) infinite;
+}
+@keyframes pulse{
+  0%,14%  { transform:scale(.2); opacity:0 }
+  16%     { transform:scale(.35); opacity:.9 }
+  26%     { transform:scale(3.2); opacity:0 }
+  44%     { transform:scale(.3); opacity:0 }
+  46%     { transform:scale(.4); opacity:.45 }
+  58%     { transform:scale(2.6); opacity:0 }
+  86%     { transform:scale(.3); opacity:0 }
+  88%     { transform:scale(.4); opacity:.75 }
+  99%,100%{ transform:scale(3.6); opacity:0 }
+}
+
+/* ---------- MUNDO (cena de hospitalidade) ---------- */
+.world-wrap{
+  position:absolute; left:0; right:0; bottom:3%;
+  height:63%;
+  z-index:2;
+  opacity:0;
+  animation: worldIn var(--T) cubic-bezier(.3,.9,.2,1) infinite;
+}
+@keyframes worldIn{
+  0%,25%  { opacity:0; transform:translateY(48px) }
+  34%     { opacity:1; transform:translateY(0) }
+  74%     { opacity:1; transform:translateY(0) }
+  81%,100%{ opacity:0; transform:translateY(34px) }
+}
+.world{ width:100%; height:100%; display:block; overflow:visible }
+
+.grid path{ stroke:var(--grid); fill:none; stroke-width:1 }
+.skyline{ fill:var(--pane); stroke:var(--line); stroke-width:1 }
+
+/* chão que corre */
+.floor{
+  stroke:var(--b2); stroke-width:1.5; fill:none;
+  stroke-dasharray:16 12;
+  animation: dashrun 1.5s linear infinite;
+  opacity:.55;
+}
+@keyframes dashrun{ to{ stroke-dashoffset:-28 } }
+
+/* --- hotel --- */
+.floorplate{
+  fill:var(--pane); stroke:var(--b2); stroke-width:1.6;
+  transform-box:fill-box; transform-origin:50% 100%;
+  opacity:0;
+  animation: rise var(--T) cubic-bezier(.2,1.3,.4,1) infinite;
+  animation-delay:var(--d,0s);
+}
+@keyframes rise{
+  0%,32%  { opacity:0; transform:translateY(26px) scaleY(.55) }
+  38%     { opacity:1; transform:translateY(0) scaleY(1) }
+  100%    { opacity:1; transform:translateY(0) scaleY(1) }
+}
+.win{
+  fill:var(--b3); opacity:0;
+  animation: lamp var(--T) steps(1,end) infinite;
+  animation-delay:var(--d,0s);
+}
+@keyframes lamp{
+  0%,41% { opacity:0 }
+  42%    { opacity:.25 }
+  43%    { opacity:.9 }
+  44%    { opacity:.35 }
+  45%    { opacity:1 }
+  100%   { opacity:1 }
+}
+.neon{
+  fill:var(--neon);
+  font-size:16px; font-weight:800; letter-spacing:4.5px;
+  text-anchor:middle;
+  opacity:0;
+  /* contorno na cor do fundo: destaca o texto da fachada e da grade */
+  paint-order:stroke; stroke:var(--bg0); stroke-width:4.5; stroke-linejoin:round;
+  animation: neon var(--T) linear infinite;
+  filter:drop-shadow(0 0 10px var(--b2));
+}
+@keyframes neon{
+  0%,40%{opacity:0} 41%{opacity:.9} 42%{opacity:.1} 43%{opacity:1}
+  44%{opacity:.2} 45%{opacity:1} 72%{opacity:1} 76%,100%{opacity:0}
+}
+.flag{
+  fill:var(--b1);
+  transform-box:fill-box; transform-origin:0% 50%;
+  animation: wave 1.5s ease-in-out infinite;
+}
+@keyframes wave{ 0%,100%{transform:skewY(0deg) scaleX(1)} 50%{transform:skewY(-7deg) scaleX(.9)} }
+
+/* a bandeira só desenrola depois que o mastro terminou de subir */
+.flag-in{
+  opacity:0;
+  transform-box:fill-box; transform-origin:0% 50%;
+  animation: unfurl var(--T) cubic-bezier(.2,1.4,.4,1) infinite;
+  animation-delay:var(--d,0s);
+}
+@keyframes unfurl{
+  0%,34%{ opacity:0; transform:scaleX(0) }
+  40%   { opacity:1; transform:scaleX(1) }
+  100%  { opacity:1; transform:scaleX(1) }
+}
+
+/* --- rota aérea + avião --- */
+.trail{
+  fill:none; stroke:var(--b2); stroke-width:1.5;
+  stroke-dasharray:5 9; stroke-linecap:round;
+  opacity:0;
+  animation: trail var(--T) linear infinite, dashflow 1.25s linear infinite;
+}
+@keyframes trail{ 0%,40%{opacity:0} 45%{opacity:.4} 68%{opacity:.4} 72%,100%{opacity:0} }
+@keyframes dashflow{ to{ stroke-dashoffset:-14 } }
+
+.comet{
+  fill:none; stroke:var(--b3); stroke-width:3; stroke-linecap:round;
+  stroke-dasharray:.045 1;
+  opacity:0;
+  animation: cometMove var(--T) linear infinite, cometFade var(--T) linear infinite;
+  filter:drop-shadow(0 0 8px var(--b2));
+}
+@keyframes cometMove{ 0%,42%{stroke-dashoffset:.045} 66%,100%{stroke-dashoffset:-.955} }
+@keyframes cometFade{ 0%,42%{opacity:0} 45%{opacity:.9} 63%{opacity:.9} 66%,100%{opacity:0} }
+
+.plane{
+  offset-path:path("M-80,150 C 90,58 268,22 470,42 C 664,60 812,112 1050,64");
+  offset-rotate:auto;
+  filter:drop-shadow(0 0 7px rgba(59,134,255,.55));
+  animation: fly var(--T) linear infinite, planeFade var(--T) linear infinite;
+}
+@keyframes fly{ 0%,42%{offset-distance:0%} 66%,100%{offset-distance:100%} }
+@keyframes planeFade{ 0%,42%{opacity:0} 45%{opacity:1} 63%{opacity:1} 66%,100%{opacity:0} }
+
+/* --- ônibus --- */
+.bus{ animation: busGo var(--T) linear infinite }
+@keyframes busGo{
+  0%,36%  { transform:translateX(-210px); opacity:0 }
+  38%     { opacity:1 }
+  56%     { opacity:1 }
+  58%,100%{ transform:translateX(1130px); opacity:0 }
+}
+.wheel{ transform-box:fill-box; transform-origin:50% 50%; animation: spin .6s linear infinite }
+@keyframes spin{ to{ transform:rotate(360deg) } }
+
+/* --- chips de módulos --- */
+.chip{
+  transform-box:fill-box; transform-origin:50% 50%;
+  opacity:0;
+  animation: pop var(--T) cubic-bezier(.2,1.5,.4,1) infinite;
+  animation-delay:var(--d,0s);
+}
+@keyframes pop{
+  0%,38% { opacity:0; transform:scale(.3) }
+  44%    { opacity:1; transform:scale(1) }
+  100%   { opacity:1; transform:scale(1) }
+}
+.chip-ring{ fill:var(--pane); stroke:var(--b2); stroke-width:1.6 }
+.chip-arc{
+  fill:none; stroke:var(--b1); stroke-width:2.4; stroke-linecap:round;
+  stroke-dasharray:56 158;
+  transform-box:fill-box; transform-origin:50% 50%;
+  animation: orbit 3s linear infinite;
+}
+@keyframes orbit{ to{ transform:rotate(360deg) } }
+.chip-lb{
+  fill:var(--ink); font-size:12.5px; font-weight:700; letter-spacing:2.6px;
+  text-anchor:middle; opacity:0;
+  /* contorno na cor do fundo para o texto não se perder na grade e no skyline */
+  paint-order:stroke; stroke:var(--bg0); stroke-width:4.5; stroke-linejoin:round;
+  animation: lbIn var(--T) ease-out infinite;
+  animation-delay:var(--d,0s);
+}
+@keyframes lbIn{
+  0%,41%{ opacity:0; transform:translateY(6px) }
+  47%   { opacity:1; transform:translateY(0) }
+  100%  { opacity:1; transform:translateY(0) }
+}
+.ic{ fill:none; stroke:var(--b3); stroke-width:2; stroke-linecap:round; stroke-linejoin:round }
+.ic .solid{ fill:var(--b3); stroke:none }
+
+/* linhas que ligam os módulos ao hotel */
+.link{
+  fill:none; stroke:var(--b2); stroke-width:1.4;
+  stroke-dasharray:3 7; opacity:0;
+  animation: linkIn var(--T) linear infinite, linkFlow 1s linear infinite;
+  animation-delay:var(--d,0s), 0s;
+}
+@keyframes linkIn{ 0%,43%{opacity:0} 49%{opacity:.55} 100%{opacity:.55} }
+@keyframes linkFlow{ to{ stroke-dashoffset:-10 } }
+
+/* vapor do prato */
+.steam path{ animation: steam 2.5s ease-in-out infinite; opacity:0 }
+.steam path:nth-child(2){ animation-delay:.35s }
+.steam path:nth-child(3){ animation-delay:.7s }
+@keyframes steam{ 0%{opacity:0; transform:translateY(4px)} 40%{opacity:.9} 100%{opacity:0; transform:translateY(-9px)} }
+
+/* coração do motel */
+.heart{
+  fill:var(--b1); stroke:none;
+  transform-box:fill-box; transform-origin:50% 50%;
+  animation: beat 1.25s ease-in-out infinite;
+}
+@keyframes beat{ 0%,100%{transform:scale(1)} 20%{transform:scale(1.28)} 40%{transform:scale(1)} 60%{transform:scale(1.16)} }
+
+/* barras do revenue */
+.rv{
+  fill:var(--b3); transform-box:fill-box; transform-origin:50% 100%;
+  animation: grow var(--T) cubic-bezier(.2,1.2,.3,1) infinite;
+  animation-delay:var(--d,0s);
+}
+@keyframes grow{ 0%,46%{transform:scaleY(.08)} 56%{transform:scaleY(1)} 100%{transform:scaleY(1)} }
+.rv-arrow{
+  stroke:var(--b1); stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round;
+  stroke-dasharray:60; stroke-dashoffset:60;
+  animation: arrow var(--T) ease-out infinite;
+}
+@keyframes arrow{ 0%,52%{stroke-dashoffset:60} 60%{stroke-dashoffset:0} 100%{stroke-dashoffset:0} }
+
+/* globo online */
+.globe-ring{
+  fill:none; stroke:var(--b1); stroke-width:2;
+  transform-box:fill-box; transform-origin:50% 50%;
+  animation: tilt 3s linear infinite;
+}
+@keyframes tilt{ 0%{transform:rotate(-20deg) scaleX(1)} 50%{transform:rotate(-20deg) scaleX(.25)} 100%{transform:rotate(-20deg) scaleX(1)} }
+
+/* ---------- controles ---------- */
+.ctrl{
+  position:fixed; top:16px; right:16px; z-index:9;
+  display:flex; gap:8px;
+  transition:opacity .45s ease, transform .45s ease;
+}
+/* somem sozinhos; só reaparecem com o cursor perto deles */
+.ctrl.is-hidden{ opacity:0; transform:translateY(-10px); pointer-events:none }
+.ctrl button{
+  display:inline-flex; align-items:center; gap:8px;
+  height:34px; padding:0 14px;
+  border-radius:99px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--sub);
+  font:600 10.5px/1 "Segoe UI",system-ui,sans-serif;
+  letter-spacing:1.5px; text-transform:uppercase;
+  cursor:pointer; transition:.22s;
+  -webkit-user-select:none; user-select:none;
+}
+.ctrl button:hover{ color:var(--b2); border-color:var(--b2) }
+.ctrl .dot{
+  width:7px; height:7px; border-radius:50%;
+  background:var(--line); transition:.22s;
+}
+.ctrl button[aria-pressed="true"]{ color:var(--b3); border-color:rgba(59,134,255,.45) }
+.ctrl button[aria-pressed="true"] .dot{ background:var(--b2); box-shadow:0 0 9px var(--b2) }
+
+@media (max-width:720px){ :root{ --lift:120px } .brand{ width:82vw } }
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation:none !important }
+  .f{ opacity:1 } .s,.world-wrap,.pulse{ opacity:0 }
+}
+</style>
 </head>
-
 <body>
-  <div class="loader-wrapper">
-    <div class="glow-bg"></div>
 
-    <div class="rings-container">
-      <div class="ring ring-1"></div>
-      <div class="ring ring-2"></div>
-      <div class="ring ring-3"></div>
-    </div>
+<div class="ctrl">
+  <button id="btTheme" title="Alternar tema claro / escuro">◐&nbsp;Tema</button>
+  <button id="btScene" aria-pressed="true" title="Exibir ou ocultar o cenário de hospitalidade"><span class="dot"></span>Cenário</button>
+</div>
 
-    <div class="orbit-wrapper">
-      <div class="comet-tail"></div>
-      <div class="satellite">
-        <div class="simbolo-glow"></div>
-        <div class="satellite-content">
-          <img src="simbolo-azul.png" alt="Carregando..." class="simbolo-loader" />
-        </div>
-      </div>
-    </div>
+<main class="stage" role="img" aria-label="Carregando Bitz All in One">
+  <div class="stars"></div>
 
-    <div class="loader-content">
-      <img src="logo-bitz-texto.png" alt="Bitz" class="logo-bitz-texto" />
-    </div>
+  <!-- ===================== CENA ===================== -->
+  <div class="world-wrap">
+  <svg class="world" viewBox="0 0 960 340" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+    <defs>
+      <path id="fly" d="M-80,150 C 90,58 268,22 470,42 C 664,60 812,112 1050,64" pathLength="1"/>
+    </defs>
+
+    <!-- grade de perspectiva -->
+    <g class="grid">
+      <path d="M480,252 L-460,340 M480,252 L-250,340 M480,252 L-70,340 M480,252 L70,340
+               M480,252 L190,340 M480,252 L300,340 M480,252 L390,340 M480,252 L480,340
+               M480,252 L570,340 M480,252 L660,340 M480,252 L770,340 M480,252 L890,340
+               M480,252 L1030,340 M480,252 L1210,340 M480,252 L1420,340"/>
+      <path d="M0,259 H960 M0,269 H960 M0,283 H960 M0,302 H960 M0,326 H960"/>
+    </g>
+
+    <!-- skyline de fundo -->
+    <path class="skyline" d="M0,252 V212 H34 V228 H66 V198 H98 V220 H132 V206 H164 V236 H198 V212 H230 V224 H268 V194 H300 V218 H336 V230 H372 V208 H404 V252 Z"/>
+    <path class="skyline" d="M556,252 V210 H588 V226 H620 V196 H654 V222 H686 V206 H720 V232 H752 V212 H786 V228 H820 V200 H852 V220 H888 V234 H922 V214 H960 V252 Z"/>
+
+    <!-- linha do chão -->
+    <path class="floor" d="M0,252 H960"/>
+
+    <!-- rota aérea -->
+    <use class="trail" href="#fly"/>
+    <use class="comet" href="#fly"/>
+
+    <!-- conexões módulo -> hotel (all in one) -->
+    <g>
+      <path class="link" style="--d:0s"   d="M228,152 C300,168 350,190 412,214"/>
+      <path class="link" style="--d:.25s" d="M332,232 C362,236 386,240 410,242"/>
+      <path class="link" style="--d:.5s"  d="M732,152 C660,168 610,190 548,214"/>
+      <path class="link" style="--d:.75s" d="M628,232 C598,236 574,240 550,242"/>
+    </g>
+
+    <!-- ================= HOTEL ================= -->
+    <g class="hotel">
+      <!-- mastro + bandeira -->
+      <rect class="floorplate" style="--d:1.15s" x="477" y="56" width="4" height="32" rx="2"/>
+      <g class="flag-in" style="--d:1.35s"><path class="flag" d="M481,58 L509,66 L481,74 Z"/></g>
+
+      <!-- torre -->
+      <rect class="floorplate" style="--d:0s"   x="416" y="206" width="128" height="46" rx="3"/>
+      <rect class="floorplate" style="--d:.28s" x="424" y="166" width="112" height="42" rx="3"/>
+      <rect class="floorplate" style="--d:.56s" x="432" y="128" width="96"  height="40" rx="3"/>
+      <rect class="floorplate" style="--d:.84s" x="440" y="94"  width="80"  height="36" rx="3"/>
+      <rect class="floorplate" style="--d:1s"   x="434" y="84"  width="92"  height="12" rx="3"/>
+
+      <!-- letreiro -->
+      <text class="neon" x="480" y="79">HOTEL</text>
+
+      <!-- porta + tapete -->
+      <rect class="floorplate" style="--d:.1s" x="466" y="224" width="28" height="28" rx="3"/>
+      <path class="floor" d="M456,252 H504" style="opacity:.9"/>
+
+      <!-- janelas que acendem -->
+      <g>
+        <rect class="win" style="--d:0s"   x="426" y="216" width="14" height="16" rx="2"/>
+        <rect class="win" style="--d:.5s"  x="446" y="216" width="14" height="16" rx="2"/>
+        <rect class="win" style="--d:1.1s" x="500" y="216" width="14" height="16" rx="2"/>
+        <rect class="win" style="--d:.3s"  x="520" y="216" width="14" height="16" rx="2"/>
+
+        <rect class="win" style="--d:.8s"  x="434" y="177" width="13" height="16" rx="2"/>
+        <rect class="win" style="--d:1.6s" x="456" y="177" width="13" height="16" rx="2"/>
+        <rect class="win" style="--d:.2s"  x="491" y="177" width="13" height="16" rx="2"/>
+        <rect class="win" style="--d:1.3s" x="513" y="177" width="13" height="16" rx="2"/>
+
+        <rect class="win" style="--d:1.9s" x="442" y="140" width="13" height="15" rx="2"/>
+        <rect class="win" style="--d:.6s"  x="464" y="140" width="13" height="15" rx="2"/>
+        <rect class="win" style="--d:2.2s" x="483" y="140" width="13" height="15" rx="2"/>
+        <rect class="win" style="--d:1.4s" x="505" y="140" width="13" height="15" rx="2"/>
+
+        <rect class="win" style="--d:2.5s" x="450" y="105" width="13" height="15" rx="2"/>
+        <rect class="win" style="--d:.9s"  x="473" y="105" width="13" height="15" rx="2"/>
+        <rect class="win" style="--d:1.8s" x="496" y="105" width="13" height="15" rx="2"/>
+      </g>
+    </g>
+
+    <!-- ================= MÓDULOS ================= -->
+    <!-- RESTAURANTE -->
+    <g transform="translate(195,145)" style="--d:0s">
+      <g class="chip">
+        <circle class="chip-ring" r="34"/>
+        <circle class="chip-arc" r="34"/>
+        <g class="ic">
+          <path d="M-15,8 H15"/>
+          <path d="M-12,8 A12,12 0 0 1 12,8"/>
+          <path d="M0,-4 V-7"/>
+          <circle class="solid" cx="0" cy="-9" r="1.8"/>
+          <g class="steam">
+            <path d="M-7,-14 c2.5,-3.5 -2.5,-5.5 0,-9"/>
+            <path d="M0,-17 c2.5,-3.5 -2.5,-5.5 0,-9"/>
+            <path d="M7,-14 c2.5,-3.5 -2.5,-5.5 0,-9"/>
+          </g>
+        </g>
+      </g>
+      <text class="chip-lb" y="54">RESTAURANTE</text>
+    </g>
+
+    <!-- MOTEL -->
+    <g transform="translate(298,238)" style="--d:.3s">
+      <g class="chip">
+        <circle class="chip-ring" r="34"/>
+        <circle class="chip-arc" r="34"/>
+        <g class="ic">
+          <path d="M-15,12 V-6"/>
+          <path d="M-15,3 H15 V12"/>
+          <rect x="-12" y="-4" width="11" height="7" rx="3.5"/>
+          <path class="heart" d="M9,-15 c-1.6,-3.4 -7,-2.4 -7,1.8 c0,3.4 4.4,6 7,8.4 c2.6,-2.4 7,-5 7,-8.4 c0,-4.2 -5.4,-5.2 -7,-1.8 Z"/>
+        </g>
+      </g>
+      <text class="chip-lb" y="54">MOTEL</text>
+    </g>
+
+    <!-- REVENUE MANAGEMENT -->
+    <g transform="translate(765,145)" style="--d:.6s">
+      <g class="chip">
+        <circle class="chip-ring" r="34"/>
+        <circle class="chip-arc" r="34"/>
+        <g class="ic">
+          <path d="M-17,14 H17"/>
+          <rect class="rv" style="--d:0s"   x="-15" y="0"   width="6.5" height="14" rx="1.5"/>
+          <rect class="rv" style="--d:.12s" x="-6"  y="-4"  width="6.5" height="18" rx="1.5"/>
+          <rect class="rv" style="--d:.24s" x="3"   y="-9"  width="6.5" height="23" rx="1.5"/>
+          <rect class="rv" style="--d:.36s" x="12"  y="-15" width="6.5" height="29" rx="1.5"/>
+          <path class="rv-arrow" d="M-15,-2 L-4,-9 L6,-14 L15,-22"/>
+          <path class="rv-arrow" d="M8,-22 H15 V-15"/>
+        </g>
+      </g>
+      <text class="chip-lb" y="54">REVENUE</text>
+    </g>
+
+    <!-- 100% ONLINE -->
+    <g transform="translate(662,238)" style="--d:.9s">
+      <g class="chip">
+        <circle class="chip-ring" r="34"/>
+        <circle class="chip-arc" r="34"/>
+        <g class="ic">
+          <circle r="12"/>
+          <ellipse rx="5" ry="12"/>
+          <path d="M-11.4,-4 H11.4 M-11.4,4 H11.4"/>
+          <ellipse class="globe-ring" rx="20" ry="7.5"/>
+        </g>
+      </g>
+      <text class="chip-lb" y="54">100% ONLINE</text>
+    </g>
+
+    <!-- ================= ÔNIBUS ================= -->
+    <g class="bus">
+      <g transform="translate(0,252)">
+        <rect x="0" y="-36" width="116" height="32" rx="7" fill="var(--pane)" stroke="var(--b2)" stroke-width="1.6"/>
+        <rect x="6"  y="-31" width="17" height="12" rx="2" fill="var(--b3)" opacity=".75"/>
+        <rect x="28" y="-31" width="17" height="12" rx="2" fill="var(--b3)" opacity=".75"/>
+        <rect x="50" y="-31" width="17" height="12" rx="2" fill="var(--b3)" opacity=".75"/>
+        <rect x="72" y="-31" width="17" height="12" rx="2" fill="var(--b3)" opacity=".75"/>
+        <rect x="95" y="-31" width="15" height="16" rx="2" fill="var(--b2)" opacity=".9"/>
+        <circle cx="116" cy="-12" r="2.2" fill="var(--b3)"/>
+        <g class="wheel">
+          <circle cx="26" cy="-3" r="6" fill="none" stroke="var(--b2)" stroke-width="2"/>
+          <path d="M26,-9 V3 M20,-3 H32" stroke="var(--b2)" stroke-width="1.4" fill="none"/>
+        </g>
+        <g class="wheel">
+          <circle cx="92" cy="-3" r="6" fill="none" stroke="var(--b2)" stroke-width="2"/>
+          <path d="M92,-9 V3 M86,-3 H98" stroke="var(--b2)" stroke-width="1.4" fill="none"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- ================= AVIÃO (visto de cima, nariz para +x) ================= -->
+    <g class="plane">
+      <g transform="scale(.8)">
+        <!-- asas em flecha -->
+        <path d="M7,-2.6 L-7,-21 L-16,-21 L-7,-2.6 Z" fill="var(--b1)"/>
+        <path d="M7,2.6  L-7,21  L-16,21  L-7,2.6  Z" fill="var(--b1)"/>
+        <!-- estabilizadores da cauda -->
+        <path d="M-19,-2 L-26,-10 L-31,-10 L-26,-2 Z" fill="var(--b1)"/>
+        <path d="M-19,2  L-26,10  L-31,10  L-26,2  Z" fill="var(--b1)"/>
+        <!-- fuselagem -->
+        <path d="M31,0 C27,-2.2 21,-3.2 13,-3.4 L-17,-3.4 C-23,-3.4 -27,-2.3 -28,0
+                 C-27,2.3 -23,3.4 -17,3.4 L13,3.4 C21,3.2 27,2.2 31,0 Z" fill="var(--b3)"/>
+        <!-- cabine -->
+        <path d="M15,-1.7 L23,-1 L23,1 L15,1.7 Z" fill="var(--b1)" opacity=".85"/>
+      </g>
+    </g>
+  </svg>
   </div>
-</body>
 
+  <!-- ===================== LOGO ===================== -->
+  <div class="brand-move"><div class="brand-float">
+    <div class="halo"></div>
+    <div class="pulse"></div>
+    <svg class="brand" viewBox="168 175 687 225" aria-hidden="true">
+      <defs>
+        <!-- geometria copiada de _arquivo/marca/bitz-logo-vetorizado.svg (o original permanece intacto) -->
+        <path id="pMark" pathLength="1" d="M319.48,386.07C305.63,383.87 291.69,377.55 280.74,368.51C277.11,365.53 271.43,359.51 268.11,355.14C264.78,350.78 260.36,346.14 258.28,344.85C254.87,342.73 253.13,342.47 240.38,342.16C228.84,341.88 225.68,342.11 223.13,343.43L220.00,345.05 L220.00,340.09C220.00,331.44 223.15,326.28 230.50,322.89C233.97,321.29 237.21,321.04 254.91,321.02C274.86,321.00 275.42,321.06 279.56,323.48C282.35,325.12 285.16,328.12 287.76,332.23C292.17,339.20 299.62,346.86 305.58,350.55C316.05,357.03 332.67,358.89 345.29,354.99C353.05,352.60 362.60,346.45 367.55,340.68C369.52,338.38 372.72,333.28 374.67,329.35C387.99,302.43 374.49,271.28 345.00,260.89C338.87,258.74 336.58,258.57 305.00,258.05L271.50,257.50 L266.89,254.79C261.23,251.46 256.39,246.08 253.63,240.05C251.71,235.86 251.55,233.65 251.53,212.00L251.50,188.50 L262.17,188.50C272.18,188.50 273.01,188.66 275.52,191.00C280.35,195.52 281.00,197.95 281.00,211.50C281.00,223.54 281.11,224.20 283.45,226.55L285.91,229.00 L310.20,229.01C323.57,229.01 337.43,229.48 341.00,230.04C367.58,234.23 390.90,251.47 401.96,275.11C411.41,295.29 411.45,320.62 402.06,340.68C397.60,350.22 391.87,357.99 383.60,365.72C374.94,373.80 362.57,380.73 351.13,383.90C342.88,386.18 327.00,387.28 319.48,386.07Z"/>
+        <path id="pBar" pathLength="1" d="M181.14,297.88C181.46,291.54 181.96,289.74 184.23,286.76C185.72,284.81 189.30,282.04 192.17,280.60L197.39,278.00 L238.23,278.00C272.26,278.00 279.66,277.75 282.65,276.50C284.63,275.68 286.47,275.00 286.75,275.00C287.71,275.00 285.86,287.37 284.52,289.94C282.57,293.66 278.09,297.63 273.50,299.69C269.91,301.31 265.10,301.55 226.90,302.00C191.39,302.42 184.01,302.74 182.53,303.97C180.86,305.36 180.78,305.03 181.14,297.88Z"/>
+        <path id="pI"   pathLength="1" d="M427.24,319.25L427.50,250.50 L441.50,250.50L455.50,250.50 L455.76,319.25L456.01,388.00 L441.50,388.00L426.99,388.00 L427.24,319.25Z"/>
+        <path id="pDot" pathLength="1" d="M433.50,228.33C431.85,227.46 429.65,226.02 428.61,225.12C425.77,222.69 423.04,216.01 423.04,211.50C423.04,206.99 425.75,200.36 428.65,197.79C431.54,195.22 437.49,193.00 441.50,193.00C445.52,193.00 451.49,195.23 454.32,197.79C460.85,203.69 461.88,215.88 456.41,222.63C454.78,224.64 451.89,227.12 449.99,228.14C445.73,230.43 437.64,230.52 433.50,228.33Z"/>
+        <path id="pT"   pathLength="1" d="M532.50,386.52C513.96,383.09 500.45,373.46 493.04,358.42C487.08,346.34 487.00,345.03 487.00,265.43L487.00,193.00 L501.00,193.00L515.00,193.00 L515.00,217.00L515.00,241.00 L533.50,241.00L552.00,241.00 L552.00,253.48L552.00,265.95 L533.75,266.23L515.50,266.50 L515.21,297.50C514.91,329.96 515.54,337.74 519.13,346.08C521.62,351.87 527.09,357.28 533.15,359.96C535.72,361.09 541.23,362.30 545.40,362.65L553.00,363.29 L553.00,375.65L553.00,388.00 L546.25,387.91C542.54,387.86 536.35,387.24 532.50,386.52Z"/>
+        <path id="pZ"   pathLength="1" d="M581.25,385.44C574.51,382.08 571.53,377.43 571.68,370.53C571.75,367.77 572.48,363.91 573.32,361.96C574.16,360.02 589.96,337.97 608.42,312.96C626.88,287.96 641.99,267.16 641.99,266.75C642.00,266.34 626.91,266.00 608.47,266.00L574.94,266.00 L575.22,253.75L575.50,241.50 L619.00,241.50L662.50,241.50 L667.00,244.00C673.07,247.37 676.35,253.56 675.62,260.25C675.33,262.86 674.39,266.46 673.53,268.25C672.67,270.04 656.85,291.98 638.38,317.00L604.79,362.50 L641.42,362.76L678.06,363.02 L677.78,375.26L677.50,387.50 L631.97,387.76L586.43,388.02 L581.25,385.44Z"/>
+        <path id="pTag" pathLength="1" d="M736.02,358.94C730.25,356.51 726.83,351.10 726.83,344.37C726.83,339.02 729.40,334.33 734.05,331.16C736.89,329.24 738.48,328.89 743.05,329.21C749.77,329.68 753.20,331.94 756.11,337.82C759.63,344.94 757.65,352.19 750.76,357.33C747.73,359.59 739.66,360.47 736.02,358.94Z M802.21,358.01C791.38,353.09 791.64,334.97 802.62,330.39C809.65,327.45 817.72,329.60 821.54,335.41C822.44,336.79 823.42,339.74 823.72,341.96L824.26,346.00 L812.13,346.00C798.79,346.00 797.93,346.48 802.25,351.51C805.53,355.31 811.72,355.96 816.52,352.99C819.80,350.96 820.32,350.89 821.70,352.27C823.72,354.29 822.66,355.80 817.63,358.08C812.35,360.48 807.60,360.46 802.21,358.01Z M764.00,347.52C764.00,336.24 764.05,335.97 766.92,332.77C769.61,329.76 770.32,329.50 775.90,329.50C781.18,329.50 782.31,329.85 784.73,332.27C787.40,334.94 787.51,335.46 787.83,347.02L788.17,359.00 L785.58,359.00L783.00,359.00 L783.00,349.43C783.00,340.36 782.09,336.43 779.60,334.77C777.50,333.36 772.99,334.01 771.00,336.00C769.25,337.75 769.00,339.33 769.00,348.50L769.00,359.00 L766.50,359.00L764.00,359.00 L764.00,347.52Z M746.91,353.55C750.49,351.70 752.43,347.07 751.66,342.23C750.14,332.66 737.63,330.95 733.46,339.74C731.43,344.00 732.17,348.90 735.27,351.71C739.17,355.27 742.55,355.80 746.91,353.55Z M818.00,339.95C818.00,339.38 816.90,337.80 815.55,336.45C812.07,332.98 806.21,333.07 802.64,336.64C801.19,338.09 800.00,339.66 800.00,340.14C800.00,340.61 804.05,341.00 809.00,341.00C814.59,341.00 818.00,340.60 818.00,339.95Z M735.02,305.25C729.88,302.66 727.00,297.77 727.00,291.60C727.01,282.43 733.19,276.01 742.02,276.00C748.34,276.00 753.04,278.75 755.75,284.04C757.58,287.60 758.00,290.07 758.00,297.21C758.00,305.92 757.98,306.00 755.50,306.00C753.94,306.00 753.00,305.43 753.00,304.50C753.00,302.63 753.19,302.61 748.50,305.00C743.67,307.46 739.57,307.54 735.02,305.25Z M765.45,304.72C765.18,304.01 765.08,294.90 765.23,284.47L765.50,265.50 L768.25,265.18L771.00,264.87 L771.00,285.43L771.00,306.00 L768.47,306.00C767.08,306.00 765.72,305.42 765.45,304.72Z M779.00,285.50L779.00,265.00 L782.00,265.00L785.00,265.00 L785.00,285.50L785.00,306.00 L782.00,306.00L779.00,306.00 L779.00,285.50Z M806.00,291.50L806.00,277.00 L808.50,277.00L811.00,277.00 L811.00,291.50L811.00,306.00 L808.50,306.00L806.00,306.00 L806.00,291.50Z M819.00,295.25C819.01,286.27 819.34,283.96 821.00,281.23C822.10,279.42 824.16,277.51 825.57,276.98C831.87,274.58 839.70,276.84 841.91,281.71C842.51,283.02 843.00,289.02 843.00,295.05L843.00,306.00 L840.50,306.00L838.00,306.00 L838.00,295.50C838.00,286.33 837.75,284.75 836.00,283.00C833.39,280.39 828.82,280.43 826.40,283.10C824.85,284.82 824.44,287.09 824.16,295.60C823.82,305.83 823.78,306.00 821.41,306.00C819.01,306.00 819.00,305.94 819.00,295.25Z M746.85,300.57C750.15,298.87 752.00,295.20 752.00,290.38C752.00,287.81 751.20,286.05 749.08,283.92C744.17,279.01 736.46,280.40 733.46,286.74C731.43,291.00 732.17,295.90 735.27,298.71C739.16,302.25 742.55,302.80 746.85,300.57Z M806.04,271.55C803.96,269.04 805.19,266.50 808.50,266.50C810.64,266.50 811.58,267.04 811.85,268.43C812.05,269.50 811.41,270.96 810.42,271.68C808.13,273.35 807.52,273.34 806.04,271.55Z"/>
+
+        <linearGradient id="gSweep" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0"   stop-color="#fff" stop-opacity="0"/>
+          <stop offset=".45" stop-color="#fff" stop-opacity=".85"/>
+          <stop offset=".55" stop-color="#fff" stop-opacity=".85"/>
+          <stop offset="1"   stop-color="#fff" stop-opacity="0"/>
+        </linearGradient>
+
+        <!-- o recorte flutua junto com as peças, senão o brilho vazaria das bordas -->
+        <clipPath id="clipLogo" clipPathUnits="userSpaceOnUse">
+          <use class="fl" style="--p:0s;--a:2.2" href="#pMark"/>
+          <use class="fl" style="--p:0s;--a:2.2" href="#pBar"/>
+          <use class="fl" style="--p:1.1s;--a:3.2;--r:.5deg" href="#pI"/>
+          <use class="fl" style="--p:1.1s;--a:4.2" href="#pDot"/>
+          <use class="fl" style="--p:2.4s;--a:3;--r:-.5deg" href="#pT"/>
+          <use class="fl" style="--p:3.3s;--a:3.4;--r:.6deg" href="#pZ"/>
+          <use class="fl" style="--p:4.1s;--a:2.4" href="#pTag"/>
+        </clipPath>
+      </defs>
+
+      <!-- preenchimento: a logo original -->
+      <g fill-rule="nonzero">
+        <g class="fl" style="--p:0s;--a:2.2"><use class="f ink-black" href="#pMark" style="--d:0"/></g>
+        <g class="fl" style="--p:0s;--a:2.2"><use class="f f-bar ink-blue" href="#pBar" style="--d:.013"/></g>
+        <g class="fl" style="--p:1.1s;--a:3.2;--r:.5deg"><use class="f ink-black" href="#pI" style="--d:.028"/></g>
+        <g class="fl" style="--p:2.4s;--a:3;--r:-.5deg"><use class="f ink-black" href="#pT" style="--d:.036"/></g>
+        <g class="fl" style="--p:3.3s;--a:3.4;--r:.6deg"><use class="f ink-black" href="#pZ" style="--d:.044"/></g>
+        <g class="fl" style="--p:1.1s;--a:4.2"><use class="f f-dot ink-black" href="#pDot" style="--d:.051"/></g>
+        <g class="fl" style="--p:4.1s;--a:2.4"><use class="f ink-blue" href="#pTag" style="--d:.06"/></g>
+      </g>
+
+      <!-- traço de escrita (segue a mesma fase de cada peça) -->
+      <g>
+        <g class="fl" style="--p:0s;--a:2.2"><use class="s" href="#pMark" style="--d:0"/></g>
+        <g class="fl" style="--p:0s;--a:2.2"><use class="s" href="#pBar" style="--d:.012"/></g>
+        <g class="fl" style="--p:1.1s;--a:3.2;--r:.5deg"><use class="s" href="#pI" style="--d:.023"/></g>
+        <g class="fl" style="--p:2.4s;--a:3;--r:-.5deg"><use class="s" href="#pT" style="--d:.031"/></g>
+        <g class="fl" style="--p:3.3s;--a:3.4;--r:.6deg"><use class="s" href="#pZ" style="--d:.039"/></g>
+        <g class="fl" style="--p:1.1s;--a:4.2"><use class="s" href="#pDot" style="--d:.045"/></g>
+        <g class="fl" style="--p:4.1s;--a:2.4"><use class="s" href="#pTag" style="--d:.055"/></g>
+      </g>
+
+      <!-- filete entre a marca e a assinatura -->
+      <line class="rule" x1="700" y1="262" x2="700" y2="360"/>
+
+      <!-- varredura de brilho -->
+      <g clip-path="url(#clipLogo)">
+        <rect class="sweep"  x="140" y="170" width="150" height="240" fill="url(#gSweep)"/>
+        <rect class="sweep2" x="140" y="170" width="110" height="240" fill="url(#gSweep)"/>
+      </g>
+    </svg>
+  </div></div>
+
+</main>
+
+<script>
+  var root = document.documentElement;
+
+  /* tema claro / escuro */
+  document.getElementById('btTheme').addEventListener('click', function(){
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    try{ localStorage.setItem('bitz.theme', root.dataset.theme); }catch(e){}
+  });
+
+  /* cenário ligado / desligado — desligado deixa só a logo e o fundo */
+  var btScene = document.getElementById('btScene');
+  function setScene(on){
+    root.dataset.scene = on ? 'on' : 'off';
+    btScene.setAttribute('aria-pressed', on ? 'true' : 'false');
+    try{ localStorage.setItem('bitz.scene', root.dataset.scene); }catch(e){}
+  }
+  btScene.addEventListener('click', function(){
+    setScene(root.dataset.scene !== 'on');
+  });
+
+  /* restaura a última escolha */
+  try{
+    var t = localStorage.getItem('bitz.theme');
+    if(t){ root.dataset.theme = t; }
+    setScene(localStorage.getItem('bitz.scene') !== 'off');
+  }catch(e){ setScene(true); }
+
+  /* ---- os controles se escondem após 5s de inatividade ----
+     Só o cursor dentro da zona dos botões (ou até 130px em volta) os traz
+     de volta; mover o mouse em qualquer outro ponto da tela não interfere. */
+  var ctrl = document.querySelector('.ctrl'), MARGEM = 130, hideT;
+
+  function agendarOcultar(){
+    clearTimeout(hideT);
+    hideT = setTimeout(function(){
+      if(ctrl.matches(':hover')){ agendarOcultar(); return; }  /* cursor parado em cima: mantém */
+      ctrl.classList.add('is-hidden');
+    }, 5000);
+  }
+  function revelar(){
+    ctrl.classList.remove('is-hidden');
+    agendarOcultar();
+  }
+  function pertoDosControles(x, y){
+    var r = ctrl.getBoundingClientRect();
+    return x >= r.left - MARGEM && x <= r.right + MARGEM &&
+           y >= r.top  - MARGEM && y <= r.bottom + MARGEM;
+  }
+
+  document.addEventListener('mousemove', function(e){
+    if(pertoDosControles(e.clientX, e.clientY)){ revelar(); }
+  });
+  ctrl.addEventListener('click', revelar);
+  document.addEventListener('touchstart', revelar, {passive:true});  /* sem cursor, um toque revela */
+
+  agendarOcultar();
+</script>
+</body>
 </html>

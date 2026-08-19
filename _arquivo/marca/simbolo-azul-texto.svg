@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -8 120 60">
+  <title>Simbolo Azul Bitz</title>
+  <style>
+    .blob {
+      fill: #1A6EFB;
+      /* Mesmo timing (0.1s delay, 0.5s duração) da animação "launch" do
+         style.css, pra forma e posição chegarem juntas no mesmo instante:
+         1) shape-to-drop: forma "original" (achatada, igual à logo estática)
+            se transforma em gota, uma vez só, enquanto ele sai do "b".
+         2) liquid-drift: a partir daí, respira (fica fina/engrossa) pra
+            sempre, em loop, começando exatamente na forma em que a
+            transição anterior parou (sem salto). */
+      animation:
+        shape-to-drop 0.5s ease-out forwards 0.1s,
+        liquid-drift 1.6s ease-in-out infinite 0.6s;
+    }
+    @keyframes shape-to-drop {
+      0% {
+        /* forma "original": achatada, quase reta, igual à logo estática */
+        d: path("M 6,22 C 6,17 100,17 114,22 C 100,27 6,27 6,22 Z");
+      }
+      100% {
+        /* forma "gota" de repouso (mesma da 0%/100% do liquid-drift) */
+        d: path("M 6,22 C 6,15 82,18 114,22 C 82,26 6,29 6,22 Z");
+      }
+    }
+    @keyframes liquid-drift {
+      0%, 100% {
+        d: path("M 6,22 C 6,15 82,18 114,22 C 82,26 6,29 6,22 Z");
+      }
+      35% {
+        d: path("M 6,22 C 6,-2 82,4 114,22 C 82,40 6,46 6,22 Z");
+      }
+      70% {
+        d: path("M 6,22 C 6,8 82,12 114,22 C 82,32 6,36 6,22 Z");
+      }
+    }
+  </style>
+  <path class="blob" d="M 6,22 C 6,17 100,17 114,22 C 100,27 6,27 6,22 Z" />
+</svg>

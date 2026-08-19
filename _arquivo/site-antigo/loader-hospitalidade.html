@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitz Loader — Hospitalidade</title>
+<style>
+  :root {
+    --bitz-blue: #0057d9;
+    --cycle: 11s;
+  }
+
+  body {
+    background-color: #ffffff;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  .bitz-hosp {
+    width: min(92vw, 720px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .bitz-hosp__scene {
+    width: 100%;
+    height: auto;
+    display: block;
+    overflow: visible;
+  }
+
+  /* ==========================================================================
+     Todo o "mundo" de hospitalidade (ceu, predio, carro, aviao, grafico) mora
+     num unico grupo com uma unica animacao de visibilidade, presa a um
+     relogio-mestre de 11s. Isso garante o pedido central: a logo comeca
+     SOZINHA (0%-14%), o cenario entra, vive, sai, e a logo volta a ficar
+     sozinha (86%-100%) -- que e exatamente onde o loop fecha (100% = 0%),
+     entao o "sozinha" do fim e o "sozinha" do comeco sao o MESMO instante
+     contínuo, sem costura. Cada elemento dentro do cenario tem seu proprio
+     looping independente (aviao voando, carro rodando, janelas acendendo) —
+     eles nunca precisam saber da hora exata, so ficam sempre em movimento
+     quando estao visiveis.
+     ========================================================================== */
+  .bitz-hosp__world {
+    animation: hosp-visibility var(--cycle) ease-in-out infinite;
+  }
+
+  @keyframes hosp-visibility {
+    0%, 14%   { opacity: 0; transform: translateY(18px); }
+    22%, 78%  { opacity: 1; transform: translateY(0); }
+    86%, 100% { opacity: 0; transform: translateY(18px); }
+  }
+
+  /* ---- ceu: sol/lua ---- */
+  .hosp-sun, .hosp-moon {
+    transform-origin: 0px 0px;
+  }
+  .hosp-sun { animation: hosp-sun-fade 9s ease-in-out infinite; }
+  .hosp-moon { animation: hosp-moon-fade 9s ease-in-out infinite; }
+  @keyframes hosp-sun-fade  { 0%, 38% { opacity: 1; } 50%, 88% { opacity: 0; } 100% { opacity: 1; } }
+  @keyframes hosp-moon-fade { 0%, 38% { opacity: 0; } 50%, 88% { opacity: 1; } 100% { opacity: 0; } }
+
+  .hosp-sun-rays {
+    transform-origin: 0px 0px;
+    animation: hosp-sun-spin 14s linear infinite;
+  }
+  @keyframes hosp-sun-spin { to { transform: rotate(360deg); } }
+
+  /* ---- predio: janelas acendendo (reservas acontecendo em tempo real) ---- */
+  .hosp-window {
+    fill: #c9d6ea;
+    animation: hosp-window-glow 3.4s ease-in-out infinite;
+  }
+  @keyframes hosp-window-glow {
+    0%, 55%  { fill: #c9d6ea; }
+    72%, 88% { fill: #ffc069; }
+    100%     { fill: #c9d6ea; }
+  }
+
+  /* ---- bandeirinha no telhado: reaproveita o simbolo original (via <use>),
+     so balançando ---- */
+  .hosp-roof-flag-flutter {
+    transform-origin: 0px 0px;
+    animation: hosp-flutter 1.8s ease-in-out infinite;
+  }
+  @keyframes hosp-flutter {
+    0%, 100% { transform: skewY(0deg) scaleX(1); }
+    50%      { transform: skewY(-9deg) scaleX(0.95); }
+  }
+  .hosp-roof-flag { fill: url(#bitzBlueGrad); }
+
+  /* ---- coqueiro balançando ---- */
+  .hosp-palm-sway {
+    transform-origin: 0px 0px;
+    animation: hosp-sway 4.2s ease-in-out infinite;
+  }
+  @keyframes hosp-sway {
+    0%, 100% { transform: rotate(-4deg); }
+    50%      { transform: rotate(4deg); }
+  }
+
+  /* ---- carrinho/van rodando pela estrada, em loop continuo ---- */
+  .hosp-car-drive {
+    animation: hosp-car-x 6.5s linear infinite;
+  }
+  @keyframes hosp-car-x {
+    from { transform: translateX(-110px); }
+    to   { transform: translateX(1110px); }
+  }
+  .hosp-wheel-spin {
+    transform-origin: 0px 0px;
+    animation: hosp-wheel-spin 0.5s linear infinite;
+  }
+  @keyframes hosp-wheel-spin { to { transform: rotate(360deg); } }
+
+  /* ---- aviao cruzando o ceu, com balanco suave (bob) ---- */
+  .hosp-plane-drive {
+    animation: hosp-plane-x 7.5s linear infinite;
+    filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.15));
+  }
+  @keyframes hosp-plane-x {
+    from { transform: translateX(-90px); }
+    to   { transform: translateX(1090px); }
+  }
+  .hosp-plane-bob {
+    transform-origin: 25px 8px;
+    animation: hosp-plane-bob 1.7s ease-in-out infinite;
+  }
+  @keyframes hosp-plane-bob {
+    0%, 100% { transform: translateY(0px) rotate(-3deg); }
+    50%      { transform: translateY(-13px) rotate(3deg); }
+  }
+
+  /* ---- grafico de receita (revenue management) pulsando ---- */
+  .hosp-bar {
+    transform-origin: 0px 0px;
+    animation: hosp-bar-grow 2.1s ease-in-out infinite;
+  }
+  @keyframes hosp-bar-grow {
+    0%, 100% { transform: scaleY(0.55); }
+    50%      { transform: scaleY(1); }
+  }
+
+  /* ==========================================================================
+     Wordmark + orbito reaproveitados: EXATAMENTE o mesmo SVG do loader
+     original (paths, defs e classes idênticos, sem alterar nenhum "d"),
+     só que colocados dentro de um <g transform="..."> pra caber nessa nova
+     composição. O mecanismo do anel (grow-uma-vez + spin infinito linear)
+     e o cross-fade do simbolo de repouso continuam os mesmos, testados.
+     ========================================================================== */
+  .bitz-loader__wordmark {
+    transform-origin: 531.5px 288.25px;
+    animation: bitz-breathe 2.6s ease-in-out infinite;
+  }
+  .bitz-loader__bitz {
+    fill: url(#bitzBlackGrad);
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25));
+  }
+  .bitz-loader__allinone {
+    fill: url(#bitzBlueGrad);
+    filter: drop-shadow(0 3px 6px rgba(0, 87, 217, 0.25));
+  }
+  @keyframes bitz-breathe {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.015); }
+  }
+
+  .bitz-loader__ground {
+    fill: #000000;
+    opacity: 0.08;
+    filter: blur(6px);
+  }
+
+  .bitz-loader__flag-rest {
+    fill: url(#bitzBlueGrad);
+    filter: drop-shadow(0 0 10px rgba(0, 87, 217, 0.5));
+    animation: bitz-flag-fade 0.5s ease-in forwards;
+  }
+  @keyframes bitz-flag-fade { to { opacity: 0; } }
+
+  .bitz-loader__orbit {
+    opacity: 0;
+    animation: bitz-orbit-fadein 0.55s ease-out forwards 0.05s;
+  }
+  @keyframes bitz-orbit-fadein { to { opacity: 1; } }
+
+  .bitz-loader__orbit-glow {
+    fill: none;
+    stroke: var(--bitz-blue);
+    stroke-width: 30;
+    stroke-linecap: round;
+    stroke-dashoffset: 0;
+    opacity: 0.32;
+    filter: blur(11px);
+    animation:
+      bitz-orbit-grow 0.6s cubic-bezier(0.3, 0, 0.2, 1) 0.05s forwards,
+      bitz-orbit-spin 2.6s linear 0.65s infinite;
+  }
+  .bitz-loader__orbit-arc {
+    fill: none;
+    stroke: url(#bitzBlueGrad);
+    stroke-width: 17;
+    stroke-linecap: round;
+    stroke-dashoffset: 0;
+    filter: drop-shadow(0 2px 4px rgba(0, 87, 217, 0.35));
+    animation:
+      bitz-orbit-grow 0.6s cubic-bezier(0.3, 0, 0.2, 1) 0.05s forwards,
+      bitz-orbit-spin 2.6s linear 0.65s infinite;
+  }
+  @keyframes bitz-orbit-grow {
+    from { stroke-dasharray: 0 100; }
+    to   { stroke-dasharray: 56 44; }
+  }
+  @keyframes bitz-orbit-spin {
+    from { stroke-dashoffset: 0; }
+    to   { stroke-dashoffset: -100; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bitz-hosp__world { animation: none; opacity: 0; }
+    .bitz-loader__wordmark { animation: none; }
+    .bitz-loader__flag-rest { animation: none; opacity: 0; }
+    .bitz-loader__orbit { animation: none; opacity: 1; }
+    .bitz-loader__orbit-glow, .bitz-loader__orbit-arc { animation-duration: 0.6s, 8s; }
+  }
+</style>
+</head>
+<body>
+  <div class="bitz-hosp" role="status" aria-label="Carregando Bitz — hotelaria, restaurante e motel, 100% online">
+    <svg class="bitz-hosp__scene" viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bitzBlackGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#333333"/>
+          <stop offset="45%" stop-color="#0a0a0a"/>
+          <stop offset="100%" stop-color="#000000"/>
+        </linearGradient>
+        <linearGradient id="bitzBlueGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#3d8bff"/>
+          <stop offset="100%" stop-color="#0057d9"/>
+        </linearGradient>
+        <linearGradient id="hospBuildingGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f3f7fd"/>
+          <stop offset="100%" stop-color="#d9e5f6"/>
+        </linearGradient>
+        <path id="bitzOrbitPath" d="M 190,288.25 A 370,180 0 1 1 930,288.25 A 370,180 0 1 1 190,288.25" pathLength="100"/>
+        <path id="hospFlagShape" d="M181.14,297.88C181.46,291.54 181.96,289.74 184.23,286.76C185.72,284.81 189.30,282.04 192.17,280.60L197.39,278.00 L238.23,278.00C272.26,278.00 279.66,277.75 282.65,276.50C284.63,275.68 286.47,275.00 286.75,275.00C287.71,275.00 285.86,287.37 284.52,289.94C282.57,293.66 278.09,297.63 273.50,299.69C269.91,301.31 265.10,301.55 226.90,302.00C191.39,302.42 184.01,302.74 182.53,303.97C180.86,305.36 180.78,305.03 181.14,297.88Z"/>
+      </defs>
+
+      <!-- ==================================================================
+           MUNDO DA HOSPITALIDADE: hotel, coqueiro, van, aviao, grafico de
+           receita, sol/lua. Tudo pintado ANTES da logo (fica atras dela).
+           ================================================================== -->
+      <g class="bitz-hosp__world">
+
+        <!-- ceu: sol / lua (24/7 = sistema sempre online) -->
+        <g transform="translate(118,96)">
+          <g class="hosp-sun">
+            <g class="hosp-sun-rays">
+              <rect x="-1.5" y="-27" width="3" height="9" rx="1.5" fill="#ffc069"/>
+              <rect x="-1.5" y="-27" width="3" height="9" rx="1.5" fill="#ffc069" transform="rotate(45)"/>
+              <rect x="-1.5" y="-27" width="3" height="9" rx="1.5" fill="#ffc069" transform="rotate(90)"/>
+              <rect x="-1.5" y="-27" width="3" height="9" rx="1.5" fill="#ffc069" transform="rotate(135)"/>
+              <rect x="-1.5" y="-27" width="3" height="9" rx="1.5" fill="#ffc069" transform="rotate(180)"/>
+              <rect x="-1.5" y="-27" width="3" height="9" rx="1.5" fill="#ffc069" transform="rotate(225)"/>
+              <rect x="-1.5" y="-27" width="3" height="9" rx="1.5" fill="#ffc069" transform="rotate(270)"/>
+              <rect x="-1.5" y="-27" width="3" height="9" rx="1.5" fill="#ffc069" transform="rotate(315)"/>
+            </g>
+            <circle r="16" fill="#ffc069"/>
+          </g>
+          <g class="hosp-moon">
+            <path d="M8,-15 A15,15 0 1 0 8,15 A10.5,12 0 1 1 8,-15 Z" fill="#9aadd0"/>
+            <circle cx="-8" cy="-17" r="1.6" fill="#c9d4ef"/>
+            <circle cx="1" cy="-21" r="1" fill="#c9d4ef"/>
+          </g>
+        </g>
+
+        <!-- estrada -->
+        <rect x="20" y="554" width="960" height="10" rx="5" fill="#e3e8f0"/>
+        <line x1="40" y1="559" x2="960" y2="559" stroke="#c7d0e0" stroke-width="2" stroke-dasharray="14 12"/>
+
+        <!-- sombra de contato do predio -->
+        <ellipse cx="412" cy="566" rx="140" ry="9" fill="#000000" opacity="0.08" style="filter:blur(5px)"/>
+
+        <!-- coqueiro -->
+        <g transform="translate(608,560)">
+          <path d="M-5,0 C-6,-36 3,-58 6,-92 L-2,-92 C-5,-58 -9,-36 -9,0 Z" fill="#9c8465"/>
+          <g transform="translate(0,-92)">
+            <g class="hosp-palm-sway">
+              <path d="M0,0 C11,-5 32,-4 45,3 C32,7 11,6 0,0 Z" fill="#34a373" transform="rotate(-58)"/>
+              <path d="M0,0 C11,-5 32,-4 45,3 C32,7 11,6 0,0 Z" fill="#2f9e6b" transform="rotate(-27)"/>
+              <path d="M0,0 C11,-5 32,-4 45,3 C32,7 11,6 0,0 Z" fill="#34a373" transform="rotate(4)"/>
+              <path d="M0,0 C11,-5 32,-4 45,3 C32,7 11,6 0,0 Z" fill="#2f9e6b" transform="rotate(35)"/>
+              <path d="M0,0 C11,-5 32,-4 45,3 C32,7 11,6 0,0 Z" fill="#34a373" transform="rotate(63)"/>
+            </g>
+          </g>
+        </g>
+
+        <!-- hotel -->
+        <g class="hosp-hotel">
+          <rect x="300" y="460" width="45" height="100" rx="8" fill="url(#hospBuildingGrad)" stroke="#c7d6ee" stroke-width="1.5"/>
+          <rect class="hosp-window" x="313" y="479" width="14" height="16" rx="3" style="animation-delay:0.2s"/>
+          <rect class="hosp-window" x="313" y="514" width="14" height="16" rx="3" style="animation-delay:1.6s"/>
+
+          <rect x="345" y="390" width="160" height="170" rx="10" fill="url(#hospBuildingGrad)" stroke="#c7d6ee" stroke-width="1.5"/>
+
+          <rect class="hosp-window" x="372" y="409" width="18" height="22" rx="3" style="animation-delay:0s"/>
+          <rect class="hosp-window" x="416" y="409" width="18" height="22" rx="3" style="animation-delay:0.6s"/>
+          <rect class="hosp-window" x="460" y="409" width="18" height="22" rx="3" style="animation-delay:1.2s"/>
+          <rect class="hosp-window" x="372" y="444" width="18" height="22" rx="3" style="animation-delay:0.9s"/>
+          <rect class="hosp-window" x="416" y="444" width="18" height="22" rx="3" style="animation-delay:1.9s"/>
+          <rect class="hosp-window" x="460" y="444" width="18" height="22" rx="3" style="animation-delay:0.4s"/>
+          <rect class="hosp-window" x="372" y="479" width="18" height="22" rx="3" style="animation-delay:2.1s"/>
+          <rect class="hosp-window" x="416" y="479" width="18" height="22" rx="3" style="animation-delay:1.1s"/>
+          <rect class="hosp-window" x="460" y="479" width="18" height="22" rx="3" style="animation-delay:2.6s"/>
+
+          <rect x="400" y="505" width="50" height="55" rx="6" fill="#0057d9"/>
+          <circle cx="440" cy="532" r="1.8" fill="#dfeaff"/>
+
+          <rect x="423" y="345" width="4" height="45" rx="2" fill="#8a97ab"/>
+          <g transform="translate(425,345)">
+            <g class="hosp-roof-flag-flutter">
+              <use href="#hospFlagShape" class="hosp-roof-flag" transform="scale(0.16) translate(-181,-290)"/>
+            </g>
+          </g>
+        </g>
+
+        <!-- van/shuttle -->
+        <g class="hosp-car-drive">
+          <g transform="translate(0,552)">
+            <ellipse cx="32" cy="11" rx="34" ry="5" fill="#000000" opacity="0.10" style="filter:blur(3px)"/>
+            <rect x="0" y="-26" width="64" height="20" rx="7" fill="url(#bitzBlueGrad)"/>
+            <rect x="14" y="-38" width="28" height="14" rx="6" fill="url(#bitzBlueGrad)"/>
+            <rect x="18" y="-35" width="9" height="8" rx="2" fill="#dfeaff"/>
+            <rect x="30" y="-35" width="9" height="8" rx="2" fill="#dfeaff"/>
+            <g transform="translate(14,0)">
+              <g class="hosp-wheel-spin">
+                <circle r="8" fill="#33383f"/>
+                <circle r="3" fill="#8fa0b3"/>
+              </g>
+            </g>
+            <g transform="translate(50,0)">
+              <g class="hosp-wheel-spin">
+                <circle r="8" fill="#33383f"/>
+                <circle r="3" fill="#8fa0b3"/>
+              </g>
+            </g>
+          </g>
+        </g>
+
+        <!-- grafico de receita (revenue management) -->
+        <g transform="translate(758,418)">
+          <rect x="0" y="0" width="172" height="142" rx="16" fill="#ffffff" stroke="#e2e8f4" stroke-width="1.5"/>
+          <path d="M120,26 L132,14 L144,26 M132,14 L132,34" stroke="#0057d9" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.85"/>
+          <g transform="translate(18,118)">
+            <g class="hosp-bar" style="animation-delay:0s"><rect x="0" y="-32" width="18" height="32" rx="5" fill="url(#bitzBlueGrad)"/></g>
+          </g>
+          <g transform="translate(48,118)">
+            <g class="hosp-bar" style="animation-delay:0.35s"><rect x="0" y="-56" width="18" height="56" rx="5" fill="url(#bitzBlueGrad)"/></g>
+          </g>
+          <g transform="translate(78,118)">
+            <g class="hosp-bar" style="animation-delay:0.7s"><rect x="0" y="-42" width="18" height="42" rx="5" fill="url(#bitzBlueGrad)"/></g>
+          </g>
+          <g transform="translate(108,118)">
+            <g class="hosp-bar" style="animation-delay:1.05s"><rect x="0" y="-70" width="18" height="70" rx="5" fill="url(#bitzBlueGrad)"/></g>
+          </g>
+          <g transform="translate(138,118)">
+            <g class="hosp-bar" style="animation-delay:1.4s"><rect x="0" y="-50" width="18" height="50" rx="5" fill="url(#bitzBlueGrad)"/></g>
+          </g>
+        </g>
+
+        <!-- aviao -->
+        <g class="hosp-plane-drive">
+          <g transform="translate(0,82)">
+            <g class="hosp-plane-bob">
+              <path class="hosp-plane-body" d="M50,8 L0,0 L18,8 L0,16 Z" fill="url(#bitzBlueGrad)"/>
+              <path d="M18,8 L50,8" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+            </g>
+          </g>
+        </g>
+      </g>
+
+      <!-- ==================================================================
+           LOGO: wordmark + anel orbital, reaproveitados sem alterar nenhum
+           "d" de path -- só reposicionados/escalados por este <g transform>
+           pra caber na composição nova. Pintado por último = sempre por
+           cima do cenário (o aviãozinho passa "atrás" dela quando cruza).
+           ================================================================== -->
+      <g transform="translate(62.925,-43.28) scale(0.7805)">
+        <ellipse class="bitz-loader__ground" cx="531.5" cy="421" rx="255" ry="15"/>
+
+        <g class="bitz-loader__wordmark">
+          <path class="bitz-loader__bitz" d="M427.24,319.25L427.50,250.50 L441.50,250.50L455.50,250.50 L455.76,319.25L456.01,388.00 L441.50,388.00L426.99,388.00 L427.24,319.25Z M532.50,386.52C513.96,383.09 500.45,373.46 493.04,358.42C487.08,346.34 487.00,345.03 487.00,265.43L487.00,193.00 L501.00,193.00L515.00,193.00 L515.00,217.00L515.00,241.00 L533.50,241.00L552.00,241.00 L552.00,253.48L552.00,265.95 L533.75,266.23L515.50,266.50 L515.21,297.50C514.91,329.96 515.54,337.74 519.13,346.08C521.62,351.87 527.09,357.28 533.15,359.96C535.72,361.09 541.23,362.30 545.40,362.65L553.00,363.29 L553.00,375.65L553.00,388.00 L546.25,387.91C542.54,387.86 536.35,387.24 532.50,386.52Z M581.25,385.44C574.51,382.08 571.53,377.43 571.68,370.53C571.75,367.77 572.48,363.91 573.32,361.96C574.16,360.02 589.96,337.97 608.42,312.96C626.88,287.96 641.99,267.16 641.99,266.75C642.00,266.34 626.91,266.00 608.47,266.00L574.94,266.00 L575.22,253.75L575.50,241.50 L619.00,241.50L662.50,241.50 L667.00,244.00C673.07,247.37 676.35,253.56 675.62,260.25C675.33,262.86 674.39,266.46 673.53,268.25C672.67,270.04 656.85,291.98 638.38,317.00L604.79,362.50 L641.42,362.76L678.06,363.02 L677.78,375.26L677.50,387.50 L631.97,387.76L586.43,388.02 L581.25,385.44Z M319.48,386.07C305.63,383.87 291.69,377.55 280.74,368.51C277.11,365.53 271.43,359.51 268.11,355.14C264.78,350.78 260.36,346.14 258.28,344.85C254.87,342.73 253.13,342.47 240.38,342.16C228.84,341.88 225.68,342.11 223.13,343.43L220.00,345.05 L220.00,340.09C220.00,331.44 223.15,326.28 230.50,322.89C233.97,321.29 237.21,321.04 254.91,321.02C274.86,321.00 275.42,321.06 279.56,323.48C282.35,325.12 285.16,328.12 287.76,332.23C292.17,339.20 299.62,346.86 305.58,350.55C316.05,357.03 332.67,358.89 345.29,354.99C353.05,352.60 362.60,346.45 367.55,340.68C369.52,338.38 372.72,333.28 374.67,329.35C387.99,302.43 374.49,271.28 345.00,260.89C338.87,258.74 336.58,258.57 305.00,258.05L271.50,257.50 L266.89,254.79C261.23,251.46 256.39,246.08 253.63,240.05C251.71,235.86 251.55,233.65 251.53,212.00L251.50,188.50 L262.17,188.50C272.18,188.50 273.01,188.66 275.52,191.00C280.35,195.52 281.00,197.95 281.00,211.50C281.00,223.54 281.11,224.20 283.45,226.55L285.91,229.00 L310.20,229.01C323.57,229.01 337.43,229.48 341.00,230.04C367.58,234.23 390.90,251.47 401.96,275.11C411.41,295.29 411.45,320.62 402.06,340.68C397.60,350.22 391.87,357.99 383.60,365.72C374.94,373.80 362.57,380.73 351.13,383.90C342.88,386.18 327.00,387.28 319.48,386.07Z M433.50,228.33C431.85,227.46 429.65,226.02 428.61,225.12C425.77,222.69 423.04,216.01 423.04,211.50C423.04,206.99 425.75,200.36 428.65,197.79C431.54,195.22 437.49,193.00 441.50,193.00C445.52,193.00 451.49,195.23 454.32,197.79C460.85,203.69 461.88,215.88 456.41,222.63C454.78,224.64 451.89,227.12 449.99,228.14C445.73,230.43 437.64,230.52 433.50,228.33Z"/>
+          <path class="bitz-loader__allinone" d="M736.02,358.94C730.25,356.51 726.83,351.10 726.83,344.37C726.83,339.02 729.40,334.33 734.05,331.16C736.89,329.24 738.48,328.89 743.05,329.21C749.77,329.68 753.20,331.94 756.11,337.82C759.63,344.94 757.65,352.19 750.76,357.33C747.73,359.59 739.66,360.47 736.02,358.94Z M802.21,358.01C791.38,353.09 791.64,334.97 802.62,330.39C809.65,327.45 817.72,329.60 821.54,335.41C822.44,336.79 823.42,339.74 823.72,341.96L824.26,346.00 L812.13,346.00C798.79,346.00 797.93,346.48 802.25,351.51C805.53,355.31 811.72,355.96 816.52,352.99C819.80,350.96 820.32,350.89 821.70,352.27C823.72,354.29 822.66,355.80 817.63,358.08C812.35,360.48 807.60,360.46 802.21,358.01Z M764.00,347.52C764.00,336.24 764.05,335.97 766.92,332.77C769.61,329.76 770.32,329.50 775.90,329.50C781.18,329.50 782.31,329.85 784.73,332.27C787.40,334.94 787.51,335.46 787.83,347.02L788.17,359.00 L785.58,359.00L783.00,359.00 L783.00,349.43C783.00,340.36 782.09,336.43 779.60,334.77C777.50,333.36 772.99,334.01 771.00,336.00C769.25,337.75 769.00,339.33 769.00,348.50L769.00,359.00 L766.50,359.00L764.00,359.00 L764.00,347.52Z M746.91,353.55C750.49,351.70 752.43,347.07 751.66,342.23C750.14,332.66 737.63,330.95 733.46,339.74C731.43,344.00 732.17,348.90 735.27,351.71C739.17,355.27 742.55,355.80 746.91,353.55Z M818.00,339.95C818.00,339.38 816.90,337.80 815.55,336.45C812.07,332.98 806.21,333.07 802.64,336.64C801.19,338.09 800.00,339.66 800.00,340.14C800.00,340.61 804.05,341.00 809.00,341.00C814.59,341.00 818.00,340.60 818.00,339.95Z M735.02,305.25C729.88,302.66 727.00,297.77 727.00,291.60C727.01,282.43 733.19,276.01 742.02,276.00C748.34,276.00 753.04,278.75 755.75,284.04C757.58,287.60 758.00,290.07 758.00,297.21C758.00,305.92 757.98,306.00 755.50,306.00C753.94,306.00 753.00,305.43 753.00,304.50C753.00,302.63 753.19,302.61 748.50,305.00C743.67,307.46 739.57,307.54 735.02,305.25Z M765.45,304.72C765.18,304.01 765.08,294.90 765.23,284.47L765.50,265.50 L768.25,265.18L771.00,264.87 L771.00,285.43L771.00,306.00 L768.47,306.00C767.08,306.00 765.72,305.42 765.45,304.72Z M779.00,285.50L779.00,265.00 L782.00,265.00L785.00,265.00 L785.00,285.50L785.00,306.00 L782.00,306.00L779.00,306.00 L779.00,285.50Z M806.00,291.50L806.00,277.00 L808.50,277.00L811.00,277.00 L811.00,291.50L811.00,306.00 L808.50,306.00L806.00,306.00 L806.00,291.50Z M819.00,295.25C819.01,286.27 819.34,283.96 821.00,281.23C822.10,279.42 824.16,277.51 825.57,276.98C831.87,274.58 839.70,276.84 841.91,281.71C842.51,283.02 843.00,289.02 843.00,295.05L843.00,306.00 L840.50,306.00L838.00,306.00 L838.00,295.50C838.00,286.33 837.75,284.75 836.00,283.00C833.39,280.39 828.82,280.43 826.40,283.10C824.85,284.82 824.44,287.09 824.16,295.60C823.82,305.83 823.78,306.00 821.41,306.00C819.01,306.00 819.00,305.94 819.00,295.25Z M746.85,300.57C750.15,298.87 752.00,295.20 752.00,290.38C752.00,287.81 751.20,286.05 749.08,283.92C744.17,279.01 736.46,280.40 733.46,286.74C731.43,291.00 732.17,295.90 735.27,298.71C739.16,302.25 742.55,302.80 746.85,300.57Z M806.04,271.55C803.96,269.04 805.19,266.50 808.50,266.50C810.64,266.50 811.58,267.04 811.85,268.43C812.05,269.50 811.41,270.96 810.42,271.68C808.13,273.35 807.52,273.34 806.04,271.55Z"/>
+        </g>
+
+        <path class="bitz-loader__flag-rest" d="M181.14,297.88C181.46,291.54 181.96,289.74 184.23,286.76C185.72,284.81 189.30,282.04 192.17,280.60L197.39,278.00 L238.23,278.00C272.26,278.00 279.66,277.75 282.65,276.50C284.63,275.68 286.47,275.00 286.75,275.00C287.71,275.00 285.86,287.37 284.52,289.94C282.57,293.66 278.09,297.63 273.50,299.69C269.91,301.31 265.10,301.55 226.90,302.00C191.39,302.42 184.01,302.74 182.53,303.97C180.86,305.36 180.78,305.03 181.14,297.88Z"/>
+
+        <g class="bitz-loader__orbit">
+          <use href="#bitzOrbitPath" class="bitz-loader__orbit-glow"/>
+          <use href="#bitzOrbitPath" class="bitz-loader__orbit-arc"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+</body>
+</html>
