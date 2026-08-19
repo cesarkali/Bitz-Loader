@@ -1,0 +1,13 @@
+{
+  "routes": [
+    { "src": "/loader/?", "dest": "/loader-b.html" },
+
+    { "handle": "filesystem" },
+
+    {
+      "src": "/.*",
+      "status": 302,
+      "headers": { "Location": "https://www.caliberda.com.br/404" }
+    }
+  ]
+}

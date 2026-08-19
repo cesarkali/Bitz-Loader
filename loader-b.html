@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="pt-BR" data-tema="claro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Bitz · Loader do sistema — "b" + símbolo em órbita</title>
+<style>
+/* ==========================================================================
+   BITZ · LOADER DO SISTEMA
+   --------------------------------------------------------------------------
+   Só a letra "b" da marca e o símbolo azul que vive dentro dela.
+
+   O símbolo não é uma figura que passeia: ele É o traço do loader, do
+   primeiro ao último quadro. O traço nasce exatamente no formato do símbolo,
+   a ponta esquerda parte para a esquerda e sobe, e o resto do corpo passa
+   pelo mesmo lugar por onde a ponta passou — física de cobra: o traço é um
+   trecho que corre por um trilho, então a cauda herda o caminho da cabeça.
+
+   COMO O TRAÇO NASCE IGUAL AO SÍMBOLO
+   O símbolo tem 23,84 de espessura de corpo e uma espinha praticamente reta
+   (inclinação de 0,79°) de (275,08 , 289,36) a (192,92 , 290,50), com 82,16
+   de vão. Um traço de 23,84 com ponta redonda sobre essa espinha fecha
+   82,16 + 23,84 = 106,00 — o comprimento exato do símbolo no vetor.
+   Por isso o primeiro quadro do loader e o símbolo da marca são a mesma
+   forma; não há troca de figura, nem fusão, nem cópia. Medido contra o
+   contorno do vetor, o traço cobre 91,3% da área do símbolo (o teto é
+   92,1%: o símbolo tem uma ponta reta e outra em bico, e um traço tem as
+   duas pontas iguais — essa é toda a diferença que sobra).
+
+   O TRILHO
+   Começa na espinha do símbolo, segue reto para a esquerda, abre até r=193
+   (o chicote, mais para fora que a própria órbita) e entra tangente na
+   órbita r=170 a 255°. O raio mínimo de curva é 39,9 — quase 2x a espessura,
+   então o traço dobra sem vincar. A curva foi resolvida contra o contorno
+   real do "b" setor a setor: em nenhum ponto chega a menos de 9 do desenho
+   da letra.
+
+   A PASSAGEM PARA A ÓRBITA INFINITA
+   Quando a cauda já rodou 20° dentro da órbita, o círculo assume. Nesse
+   quadro as duas formas são idênticas de propósito — mesma posição
+   (275,22°), mesmo vão (82,16), mesma espessura (23,84) e mesma velocidade
+   (212°/s). A emenda não é disfarçada: ela não existe.
+
+   POR QUE NUNCA TRAVA
+   A volta e o corrimento da cauda são lineares e independentes, cada um
+   fechando exatamente uma volta. Só o comprimento e a espessura respiram.
+   Não existe quadro em que a cauda pare — nem no reinício do ciclo, porque
+   -100 e 0 de dashoffset são o mesmo ponto do círculo.
+
+   Geometria medida no vetor original (bitz-logo-vetorizado.svg, intacto):
+     centro do bojo do "b" .... (329.16 , 307.33)
+     raio externo do bojo ..... 79.4     espessura do traço .... 29.35
+     ponto mais alto do "b" ... r=142 (topo da haste, a 242°)
+     órbita ................... r=170   circunferência 1068,14
+
+   O componente é o bloco .bz-box. Fundo próprio: nenhum.
+   Tudo escala por uma medida só: --bz-size. As caixas são em `em`, sobre uma
+   malha de 440 unidades de vetor = 1em; o que está dentro dos SVG usa as
+   coordenadas do vetor original.
+   ========================================================================== */
+
+.bz-overlay{
+  position:absolute; inset:0; z-index:50;
+  display:grid; place-items:center;
+  background:var(--bz-veil, rgba(255,255,255,.62));
+  -webkit-backdrop-filter:blur(var(--bz-blur,5px)) saturate(.92);
+          backdrop-filter:blur(var(--bz-blur,5px)) saturate(.92);
+  animation:bzVeil .3s ease both;
+}
+@keyframes bzVeil{ from{opacity:0} to{opacity:1} }
+
+.bz-box{
+  /* ---- ajustes ---- */
+  --bz-size:140px;        /* única medida: tudo deriva daqui */
+  --bz-ink:#141a24;       /* cor da letra "b" */
+  --bz-turn:2.8s;         /* um ciclo: volta do anel + corrimento da cauda */
+  --bz-in:1.05s;          /* a saída do símbolo, uma vez só */
+  --bz-pulso:1.4s;        /* respiro do "b" e do halo — independente do traço */
+  --bz-skel:1.9s;         /* varredura do rótulo — independente do traço */
+
+  font-size:var(--bz-size);
+  display:flex; flex-direction:column; align-items:center; gap:.06em;
+  color:var(--bz-ink);
+}
+
+.bz{ position:relative; width:1em; height:1em; overflow:visible }
+.bz svg{ display:block; width:100%; height:100%; overflow:visible }
+
+/* ---------- halo azul que respira atrás da letra ---------- */
+.bz-halo{
+  position:absolute; left:50%; top:50%;
+  width:.56em; height:.56em; margin:-.28em 0 0 -.28em;
+  border-radius:50%;
+  background:radial-gradient(circle at 50% 50%,
+      rgba(0,87,217,.30) 0%, rgba(0,87,217,.16) 40%, rgba(0,87,217,0) 70%);
+  filter:blur(.025em);
+  pointer-events:none;
+  animation:bzHalo var(--bz-pulso) ease-in-out infinite;
+}
+@keyframes bzHalo{
+  0%,100%{ transform:scale(.93); opacity:.6 }
+  50%    { transform:scale(1.07); opacity:1 }
+}
+
+/* ---------- o traço, em qualquer fase ---------- */
+.bz-tr{
+  fill:none;
+  stroke:url(#bzArco);
+  stroke-width:23.84;             /* a espessura do corpo do símbolo */
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+/* o mesmo traço, largo e desfocado: é o que dá corpo de líquido */
+.bz-glow{
+  stroke:rgba(59,134,255,.32);
+  stroke-width:40;
+  filter:blur(.022em);
+}
+
+/* ==========================================================================
+   FASE 1 — A SAÍDA
+   O traço corre pelo trilho. Um dash só: a cauda passa onde a cabeça passou.
+   ========================================================================== */
+.bz-rail{ position:absolute; inset:0 }
+.bz-rail path{
+  stroke-dasharray:151.45 1000;   /* 151,45/1000 do trilho = os 82,16 do símbolo */
+  stroke-dashoffset:0;
+  animation:bzCobra var(--bz-in) cubic-bezier(.42,.02,.5,.49) forwards;
+}
+/* O ease é calculado, não escolhido: a cauda tem de chegar ao fim exatamente
+   na velocidade com que a órbita a recebe — que agora é a da volta pura,
+   360/--bz-turn, porque no quadro da troca a cauda ainda está segurando.
+   Se mudar --bz-in ou --bz-turn, refaça o ease:
+       d  = 2.7208 * (--bz-in em s) / (--bz-turn em s)     <- derivada no fim
+       y2 = 1 - 0.5*d   (preso entre 0 e 0.9)
+       x2 = 1 - (1 - y2)/d
+       cubic-bezier(.42, .02, x2, y2)
+   Com os valores de fábrica (1,05s e 2,8s) isso dá cubic-bezier(.42,.02,.5,.49). */
+@keyframes bzCobra{ to{ stroke-dashoffset:-723.50 } }
+
+/* a saída sai de cena no quadro em que as duas formas coincidem */
+.bz-rail{ animation:bzTroca .08s linear forwards; animation-delay:var(--bz-in) }
+@keyframes bzTroca{ to{ opacity:0 } }
+
+/* ==========================================================================
+   FASE 2 — A ÓRBITA, SEM FIM
+   .bz-lead   põe a órbita a 275,22°, onde a saída entrega o traço
+   .bz-ring   a volta, velocidade constante
+   .bz-car    a cauda corre (linear) enquanto o vão respira
+   ========================================================================== */
+.bz-lead,.bz-ring{ position:absolute; inset:0; transform-origin:50% 50% }
+.bz-lead{ transform:rotate(275.22deg) }
+.bz-ring{
+  opacity:0;
+  animation:bzEntra .08s linear forwards,
+            bzGira  var(--bz-turn) linear infinite;
+  animation-delay:var(--bz-in), var(--bz-in);
+}
+@keyframes bzEntra{ to{ opacity:1 } }
+@keyframes bzGira { to{ transform:rotate(360deg) } }
+
+.bz-car{
+  /* 7,692% de 1068,14 = os mesmos 82,16. O vazio SEMPRE fecha 100 com o
+     traço: assim o padrão dá exatamente uma volta, e o -100 do bzCorre cai
+     no mesmo ponto de onde saiu. É isso que faz o ciclo emendar sem degrau. */
+  stroke-dasharray:7.692 92.308;
+  stroke-dashoffset:0;
+  /* os três andam no MESMO ciclo, e é isso que impede a ponta de recuar */
+  animation:bzCorre   var(--bz-turn) ease-in-out infinite,
+            bzRespira var(--bz-turn) ease-in-out infinite,
+            bzMassa   var(--bz-turn) ease-in-out infinite;
+  animation-delay:var(--bz-in), var(--bz-in), var(--bz-in);
+}
+/* A CAUDA SEGURA E DISPARA — POR QUE A PONTA NÃO VOLTA MAIS
+   A ponta anda a (volta) + (cauda) + (crescimento do vão). Se a cauda
+   corresse em velocidade constante, na hora de recolher o vão encolheria
+   mais depressa do que a cauda avança e a ponta andaria para trás — era
+   exatamente o que acontecia. A correção é a mesma do spinner do Android:
+   enquanto o traço estica, a cauda quase segura (avança só 6 de 100);
+   quando o traço recolhe, ela dispara os 94 que faltam e compensa.
+   Conferido derivando o ciclo inteiro com o ease-in-out real do CSS:
+   a ponta varia entre +100 e +273,5 por ciclo — nunca chega a zero. */
+@keyframes bzCorre{
+  0%  { stroke-dashoffset:0 }
+  50% { stroke-dashoffset:-6 }
+  100%{ stroke-dashoffset:-100 }
+}
+/* só o vão e a espessura respiram — é daí que vem o "líquido" */
+@keyframes bzRespira{
+  0%,100%{ stroke-dasharray:7.692 92.308 }
+  50%    { stroke-dasharray:52 48 }
+}
+@keyframes bzMassa{
+  0%,100%{ stroke-width:23.84 }
+  50%    { stroke-width:14.5 }
+}
+/* o corpo desfocado arrasta um pouco atrás, como massa que demora a virar */
+.bz-ring .bz-glow{
+  animation:bzCorre   var(--bz-turn) ease-in-out infinite,
+            bzRespira var(--bz-turn) ease-in-out infinite,
+            bzMassaGlow var(--bz-turn) ease-in-out infinite;
+  animation-delay:calc(var(--bz-in) + .07s), calc(var(--bz-in) + .07s), calc(var(--bz-in) + .07s);
+}
+@keyframes bzMassaGlow{
+  0%,100%{ stroke-width:40 }
+  50%    { stroke-width:26 }
+}
+
+/* ---------- a letra "b" ---------- */
+.bz-letter{
+  position:absolute; left:50%; top:50%;
+  width:.56818em; height:.56818em; margin:-.28409em 0 0 -.28409em;
+  transform-origin:50% 50%;
+  animation:bzBeat var(--bz-pulso) ease-in-out infinite;
+}
+@keyframes bzBeat{
+  0%,100%{ transform:scale(1);     filter:drop-shadow(0 0 .016em rgba(0,87,217,.26)) }
+  50%    { transform:scale(1.026); filter:drop-shadow(0 0 .045em rgba(0,87,217,.5)) }
+}
+.bz-b{ fill:currentColor }
+
+/* ---------- o rótulo, em skeleton ---------- */
+.bz-txt{
+  margin:0;
+  font:600 .105em/1 "Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  letter-spacing:.14em; text-transform:uppercase; white-space:nowrap;
+  background:linear-gradient(100deg,
+      var(--bz-txt-dim, rgba(20,26,36,.28)) 28%,
+      var(--bz-txt-hi,  rgba(20,26,36,.82)) 48%,
+      var(--bz-txt-dim, rgba(20,26,36,.28)) 68%);
+  background-size:260% 100%;
+  -webkit-background-clip:text; background-clip:text;
+  color:transparent;
+  animation:bzTxt var(--bz-skel) linear infinite;
+}
+@keyframes bzTxt{ from{ background-position:140% 0 } to{ background-position:-60% 0 } }
+
+/* o pulso do "b" pode ser desligado sem tocar no traço */
+.bz-box.sem-pulso .bz-letter,
+.bz-box.sem-pulso .bz-halo{ animation:none }
+
+/* ---------- acessibilidade ---------- */
+@media (prefers-reduced-motion: reduce){
+  .bz-halo,.bz-letter,.bz-txt{ animation:none !important }
+  .bz-rail{ opacity:0; animation:none !important }
+  .bz-ring{ opacity:1; animation:bzGira 6s linear infinite !important }
+  .bz-car{ stroke-dasharray:26 74; animation:none !important }
+}
+
+/* ==========================================================================
+   DAQUI PARA BAIXO É SÓ A PÁGINA DE DEMONSTRAÇÃO.
+   Nada disso precisa ir para o sistema.
+   ========================================================================== */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  font:14px/1.45 "Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  color:#1d2430; background:#eef1f6;
+  display:grid; grid-template-columns:1fr 268px;
+  overflow:hidden;
+}
+html[data-tema="escuro"] body{ color:#e7eefb; background:#0b1220 }
+html[data-tema="xadrez"] body{ background:#12151c }
+
+/* ---- palco: onde o loader aparece ---- */
+.palco{ position:relative; overflow:hidden }
+
+/* fundo xadrez, para conferir que o loader não carrega fundo nenhum */
+.xadrez{
+  position:absolute; inset:0; display:none;
+  background-color:#1b1f28;
+  background-image:
+    linear-gradient(45deg,#272c37 25%,transparent 25%,transparent 75%,#272c37 75%),
+    linear-gradient(45deg,#272c37 25%,transparent 25%,transparent 75%,#272c37 75%);
+  background-size:26px 26px; background-position:0 0,13px 13px;
+}
+html[data-tema="xadrez"] .xadrez{ display:block }
+html[data-tema="xadrez"] .app{ display:none }
+
+/* ---- maquete do painel, só para o desfoque ter o que borrar ---- */
+.app{ position:absolute; inset:0; display:flex; overflow:hidden }
+.rail{ width:46px; background:#f7f9fc; border-right:1px solid #e2e8f1;
+       display:flex; flex-direction:column; align-items:center; gap:16px; padding:14px 0 }
+.rail i{ width:19px; height:19px; border-radius:5px; background:#c9d4e4; display:block }
+.rail i:nth-child(3n){ background:#0057D9; opacity:.5 }
+.col{ flex:1; display:flex; flex-direction:column; min-width:0 }
+.top{ height:44px; background:#0e1b33; display:flex; align-items:center; gap:18px;
+      padding:0 18px; color:#cddcf5; font-size:12px; flex:none }
+.top b{ color:#fff; font-weight:600 }
+.top .sp{ flex:1 }
+.abas{ height:38px; display:flex; gap:26px; padding:0 22px; align-items:center;
+       border-bottom:1px solid #e2e8f1; background:#fff; font-size:12.5px; color:#5b6b83; flex:none }
+.abas span:first-child{ color:#0057D9; box-shadow:inset 0 -2px 0 #0057D9; font-weight:600 }
+.corpo{ flex:1; overflow:hidden; padding:16px 22px; background:#fff }
+.kpis{ display:flex; gap:26px; margin-bottom:16px; flex-wrap:wrap }
+.kpi{ text-align:center; font-size:10.5px; color:#7c8aa0 }
+.kpi u{ display:grid; place-items:center; width:44px; height:44px; margin:0 auto 5px;
+        border-radius:50%; border:3px solid #e6ebf3; border-top-color:#0057D9;
+        font-size:12px; font-weight:700; color:#2b3648; text-decoration:none }
+.faixa{ display:inline-block; font-size:10px; color:#5b6b83; background:#eef2f8;
+        border-radius:20px; padding:3px 11px; margin:6px 0 10px }
+.uhs{ display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:11px }
+.uh{ height:78px; border-radius:7px; padding:8px 9px; font-size:11px; line-height:1.3;
+     background:#dff3e6; color:#2f6b47 }
+.uh b{ display:block; font-size:13.5px; font-weight:700 }
+.uh.v{ background:#fbe0e3; color:#8e3644 }
+.uh.l{ background:#fdeed8; color:#8a5c1d }
+.uh.c{ background:#e9edf3; color:#5b6b83 }
+html[data-tema="escuro"] .rail{ background:#0f172a; border-color:#1e2b45 }
+html[data-tema="escuro"] .rail i{ background:#2a3b5c }
+html[data-tema="escuro"] .abas{ background:#0f172a; border-color:#1e2b45; color:#8ba2c8 }
+html[data-tema="escuro"] .corpo{ background:#0f172a }
+html[data-tema="escuro"] .kpi u{ border-color:#22304d; border-top-color:#3b86ff; color:#dbe6f8 }
+html[data-tema="escuro"] .faixa{ background:#1a2540; color:#8ba2c8 }
+html[data-tema="escuro"] .uh{ background:#12361f; color:#7fd6a0 }
+html[data-tema="escuro"] .uh.v{ background:#3a1620; color:#f0919f }
+html[data-tema="escuro"] .uh.l{ background:#3a2a12; color:#e8bb72 }
+html[data-tema="escuro"] .uh.c{ background:#1a2540; color:#8ba2c8 }
+
+/* ---- painel de ajustes ---- */
+.ctrl{ background:#f7f9fc; border-left:1px solid #e2e8f1; padding:20px 18px;
+       overflow:auto; display:flex; flex-direction:column; gap:16px }
+html[data-tema="escuro"] .ctrl,
+html[data-tema="xadrez"] .ctrl{ background:#0f172a; border-color:#1e2b45; color:#e7eefb }
+.ctrl h1{ font-size:12px; letter-spacing:1.6px; text-transform:uppercase;
+          color:#0057D9; margin:0 0 2px }
+.ctrl h1 small{ display:block; letter-spacing:0; text-transform:none; font-weight:400;
+                font-size:11.5px; color:#7c8aa0; margin-top:5px; line-height:1.5 }
+.campo label{ display:flex; justify-content:space-between; font-size:11px;
+              color:#5b6b83; margin-bottom:5px }
+html[data-tema="escuro"] .campo label,
+html[data-tema="xadrez"] .campo label{ color:#8ba2c8 }
+.campo label b{ color:#0057D9; font-variant-numeric:tabular-nums }
+.campo input[type=range]{ width:100%; accent-color:#0057D9 }
+.linha{ display:flex; gap:7px; flex-wrap:wrap }
+.ctrl button{ flex:1; min-width:74px; height:31px; border-radius:7px; cursor:pointer;
+              border:1px solid #d3dce9; background:#fff; color:#33415c;
+              font:600 11px/1 "Segoe UI",system-ui,sans-serif; transition:.15s }
+.ctrl button:hover{ border-color:#0057D9; color:#0057D9 }
+.ctrl button[aria-pressed=true]{ background:#0057D9; border-color:#0057D9; color:#fff }
+html[data-tema="escuro"] .ctrl button,
+html[data-tema="xadrez"] .ctrl button{ background:#16213a; border-color:#26355a; color:#c6d6f0 }
+.ctrl button.destaque{ background:#0a7d3f; border-color:#0a7d3f; color:#fff }
+.ctrl button.destaque:hover{ background:#096935; border-color:#096935; color:#fff }
+.dica{ font-size:10.5px; color:#7c8aa0; line-height:1.5; margin:-8px 0 0 }
+html[data-tema="escuro"] .dica,
+html[data-tema="xadrez"] .dica{ color:#7f92b3 }
+/* só aparece se a área de transferência do navegador for negada */
+.saida{ width:100%; height:150px; font:10.5px/1.4 ui-monospace,Consolas,monospace;
+        border:1px solid #d3dce9; border-radius:7px; padding:8px; resize:vertical;
+        background:#fff; color:#33415c }
+html[data-tema="escuro"] .saida,
+html[data-tema="xadrez"] .saida{ background:#16213a; border-color:#26355a; color:#c6d6f0 }
+.nota{ font-size:11px; color:#7c8aa0; line-height:1.55; border-top:1px solid #e2e8f1;
+       padding-top:13px; margin-top:auto }
+html[data-tema="escuro"] .nota,
+html[data-tema="xadrez"] .nota{ border-color:#1e2b45; color:#7f92b3 }
+.nota code{ font-family:ui-monospace,Consolas,monospace; font-size:10.5px; color:#0057D9 }
+@media (max-width:860px){ body{ grid-template-columns:1fr; grid-template-rows:1fr auto } }
+</style>
+</head>
+
+<body>
+
+<!-- ===== geometria da marca (recortada do vetor original, que segue intacto) ===== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <!-- letra "b" -->
+  <path id="bzLetraB" d="M319.48,386.07C305.63,383.87 291.69,377.55 280.74,368.51C277.11,365.53 271.43,359.51 268.11,355.14C264.78,350.78 260.36,346.14 258.28,344.85C254.87,342.73 253.13,342.47 240.38,342.16C228.84,341.88 225.68,342.11 223.13,343.43L220.00,345.05 L220.00,340.09C220.00,331.44 223.15,326.28 230.50,322.89C233.97,321.29 237.21,321.04 254.91,321.02C274.86,321.00 275.42,321.06 279.56,323.48C282.35,325.12 285.16,328.12 287.76,332.23C292.17,339.20 299.62,346.86 305.58,350.55C316.05,357.03 332.67,358.89 345.29,354.99C353.05,352.60 362.60,346.45 367.55,340.68C369.52,338.38 372.72,333.28 374.67,329.35C387.99,302.43 374.49,271.28 345.00,260.89C338.87,258.74 336.58,258.57 305.00,258.05L271.50,257.50 L266.89,254.79C261.23,251.46 256.39,246.08 253.63,240.05C251.71,235.86 251.55,233.65 251.53,212.00L251.50,188.50 L262.17,188.50C272.18,188.50 273.01,188.66 275.52,191.00C280.35,195.52 281.00,197.95 281.00,211.50C281.00,223.54 281.11,224.20 283.45,226.55L285.91,229.00 L310.20,229.01C323.57,229.01 337.43,229.48 341.00,230.04C367.58,234.23 390.90,251.47 401.96,275.11C411.41,295.29 411.45,320.62 402.06,340.68C397.60,350.22 391.87,357.99 383.60,365.72C374.94,373.80 362.57,380.73 351.13,383.90C342.88,386.18 327.00,387.28 319.48,386.07Z"/>
+  <!-- a cauda perde um pouco de corpo: dá leitura de rastro sem descaracterizar -->
+  <!-- o traço não é chapado: vira do azul claro ao azul Bitz ao longo do arco -->
+  <linearGradient id="bzArco" gradientUnits="userSpaceOnUse" x1="159" y1="187" x2="499" y2="427">
+    <stop offset="0"   stop-color="#6aa6ff"/>
+    <stop offset=".45" stop-color="#1f74e8"/>
+    <stop offset="1"   stop-color="#0057D9"/>
+  </linearGradient>
+</defs></svg>
+
+<main class="palco">
+  <div class="xadrez"></div>
+
+  <!-- maquete do painel (só para o desfoque ter conteúdo por baixo) -->
+  <div class="app">
+    <nav class="rail"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></nav>
+    <div class="col">
+      <header class="top"><b>Bitz</b><span>Procurar Reservas</span><span>Nova Reserva</span><span class="sp"></span><span>419 · BITZ DEMONSTRAÇÃO</span></header>
+      <div class="abas"><span>Pool</span><span>Condomínio</span><span>DayUse</span><span>Quartos Virtuais</span></div>
+      <div class="corpo">
+        <div class="kpis" id="kpis"></div>
+        <div class="faixa">Andar: Standard (28)</div>
+        <div class="uhs" id="uhs"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ O LOADER ============ -->
+  <div class="bz-overlay" id="overlay">
+    <div class="bz-box" id="bz" role="status" aria-label="Carregando">
+      <div class="bz">
+
+        <!-- halo azul que respira atrás da letra -->
+        <div class="bz-halo"></div>
+
+        <!-- FASE 1: o traço nasce no formato do símbolo e corre pelo trilho -->
+        <svg class="bz-rail" viewBox="109.16 87.33 440 440" aria-hidden="true">
+          <path class="bz-tr bz-glow" pathLength="1000" d="M275.08,289.36 L192.92,290.50 C132.93,289.67 111.29,189.71 285.16,143.12 A170.00,170.00 0 0,1 469.73,211.72"/>
+          <path class="bz-tr"         pathLength="1000" d="M275.08,289.36 L192.92,290.50 C132.93,289.67 111.29,189.71 285.16,143.12 A170.00,170.00 0 0,1 469.73,211.72"/>
+        </svg>
+
+        <!-- FASE 2: a mesma forma, agora em órbita sem fim -->
+        <div class="bz-lead"><div class="bz-ring">
+          <svg viewBox="109.16 87.33 440 440" aria-hidden="true">
+            <circle class="bz-tr bz-car bz-glow" cx="329.16" cy="307.33" r="170" pathLength="100"/>
+            <circle class="bz-tr bz-car"         cx="329.16" cy="307.33" r="170" pathLength="100"/>
+          </svg>
+        </div></div>
+
+        <!-- a letra "b" -->
+        <div class="bz-letter">
+          <svg viewBox="204.16 182.33 250 250" aria-hidden="true"><use class="bz-b" href="#bzLetraB"/></svg>
+        </div>
+
+      </div>
+      <p class="bz-txt">Carregando…</p>
+    </div>
+  </div>
+</main>
+
+<aside class="ctrl">
+  <h1>Loader Bitz
+    <small>O símbolo sai da letra, gira e orbita em loop. Ajuste aqui e leve os valores para o sistema.</small>
+  </h1>
+
+  <div class="campo">
+    <label>Tamanho <b id="vSize">140 px</b></label>
+    <input type="range" id="rSize" min="90" max="280" step="2" value="140">
+  </div>
+  <div class="campo">
+    <label>Desfoque do fundo <b id="vBlur">5 px</b></label>
+    <input type="range" id="rBlur" min="0" max="16" step="1" value="5">
+  </div>
+  <div class="campo">
+    <label>Opacidade do véu <b id="vVeil">62 %</b></label>
+    <input type="range" id="rVeil" min="0" max="95" step="1" value="62">
+  </div>
+  <div class="campo">
+    <label>Volta do traço <b id="vRit">2.80 s</b></label>
+    <input type="range" id="rRit" min="150" max="600" step="10" value="280">
+  </div>
+  <div class="campo">
+    <label>Tempo da saída <b id="vSai">1.05 s</b></label>
+    <input type="range" id="rSai" min="50" max="220" step="5" value="105">
+  </div>
+  <div class="campo">
+    <label>Pulso do &ldquo;b&rdquo; <b id="vPul">1.40 s</b></label>
+    <input type="range" id="rPul" min="60" max="400" step="5" value="140">
+  </div>
+  <div class="campo">
+    <label>Pulso do rótulo <b id="vSkl">1.90 s</b></label>
+    <input type="range" id="rSkl" min="80" max="500" step="10" value="190">
+  </div>
+
+  <div class="linha">
+    <button id="bClaro"  aria-pressed="true">Claro</button>
+    <button id="bEscuro" aria-pressed="false">Escuro</button>
+    <button id="bXadrez" aria-pressed="false">Xadrez</button>
+  </div>
+  <div class="linha">
+    <button id="bPulso"  aria-pressed="true">Pulso do &ldquo;b&rdquo;</button>
+    <button id="bRotulo" aria-pressed="true">Rótulo</button>
+  </div>
+  <div class="linha">
+    <button id="bReplay">Rever a saída</button>
+  </div>
+  <div class="linha">
+    <button id="bToggle" aria-pressed="true">Ocultar o loader</button>
+  </div>
+
+  <div class="linha">
+    <button id="bCopiar" class="destaque">Copiar o loader</button>
+  </div>
+  <p class="dica" id="dica">Copia o componente inteiro &mdash; CSS, geometria e markup &mdash;
+     já com os valores que você ajustou aqui.</p>
+  <textarea id="saida" class="saida" readonly hidden></textarea>
+
+  <p class="nota">
+    Para levar ao sistema, copie o bloco <code>.bz-overlay</code> / <code>.bz-box</code>
+    do topo do arquivo, o markup do loader e os <code>&lt;defs&gt;</code> (o path da
+    letra e o gradiente). O componente não desenha fundo: quem o dá é o
+    <code>.bz-overlay</code>, com <code>backdrop-filter</code>. A letra usa
+    <code>currentColor</code> — basta acertar <code>--bz-ink</code>. Se mexer em
+    <code>--bz-in</code> ou <code>--bz-turn</code> fora daqui, refaça o ease da
+    saída pela fórmula que está junto do <code>@keyframes bzCobra</code>.
+  </p>
+</aside>
+
+<script>
+/* ---- maquete: KPIs e mapa de UHs ---- */
+var kpis = [["28","Ocupados"],["66","Disponíveis"],["1","Interditados"],["2","Limpeza"],
+            ["1","Check-in"],["1","Check-out"],["33","Sujos"],["64","Limpos"]];
+document.getElementById("kpis").innerHTML = kpis.map(function(k){
+  return '<div class="kpi"><u>' + k[0] + "</u>" + k[1] + "</div>";
+}).join("");
+
+var classes = ["","","v","","l","","","c","","v","","","l","","","","v","","c","",""];
+var nomes = ["TCASAL","MANSÃO","SUÍTE","TCASAL","TEST","RICK","ELAINE","ELAINE","EMER","EMER",
+             "SUÍTE","STDC","STA","LX","SUÍTE","EMER","TCASAL","ELAINE","STA","SUÍTE","EMER"];
+document.getElementById("uhs").innerHTML = nomes.map(function(n,i){
+  return '<div class="uh ' + classes[i] + '"><b>' + (103 + i * 7) + "</b>" + n + "</div>";
+}).join("");
+
+/* ---- ajustes ---- */
+var raiz = document.documentElement,
+    bz   = document.getElementById("bz"),
+    ov   = document.getElementById("overlay");
+
+function veu(p){
+  return raiz.dataset.tema === "escuro"
+    ? "rgba(9,14,26," + (p / 100) + ")"
+    : "rgba(255,255,255," + (p / 100) + ")";
+}
+
+function liga(id, alvo, fim){
+  var r = document.getElementById("r" + id), v = document.getElementById("v" + id);
+  function aplicar(){ var n = +r.value; v.textContent = fim(n); alvo(n); }
+  r.addEventListener("input", aplicar);
+  aplicar();
+}
+liga("Size", function(n){ bz.style.setProperty("--bz-size", n + "px"); }, function(n){ return n + " px"; });
+liga("Blur", function(n){ ov.style.setProperty("--bz-blur", n + "px"); }, function(n){ return n + " px"; });
+liga("Veil", function(n){ ov.style.setProperty("--bz-veil", veu(n)); },   function(n){ return n + " %"; });
+/* Volta e saída mexem no mesmo ajuste: o ease da saída tem de continuar
+   entregando a cauda na velocidade da órbita, senão a emenda ganha um degrau.
+   É a fórmula documentada junto do @keyframes bzCobra. */
+function ajustar(){
+  var turn = +document.getElementById("rRit").value / 100;
+  var sai  = +document.getElementById("rSai").value / 100;
+  bz.style.setProperty("--bz-turn", turn.toFixed(2) + "s");
+  bz.style.setProperty("--bz-in",   sai.toFixed(2)  + "s");
+
+  var d  = 2.7208 * sai / turn;
+  var y2 = Math.min(.9, Math.max(0, 1 - .5 * d));
+  var x2 = 1 - (1 - y2) / d;
+  var trilho = bz.querySelectorAll(".bz-rail path");
+  for (var i = 0; i < trilho.length; i++){
+    trilho[i].style.animationTimingFunction =
+      "cubic-bezier(.42,.02," + x2.toFixed(4) + "," + y2.toFixed(4) + ")";
+  }
+}
+liga("Rit", ajustar, function(n){ return (n / 100).toFixed(2) + " s"; });
+liga("Sai", ajustar, function(n){ return (n / 100).toFixed(2) + " s"; });
+/* estes dois não têm nada a ver com o traço: andam no seu próprio tempo */
+liga("Pul", function(n){ bz.style.setProperty("--bz-pulso", (n / 100).toFixed(2) + "s"); },
+            function(n){ return (n / 100).toFixed(2) + " s"; });
+liga("Skl", function(n){ bz.style.setProperty("--bz-skel",  (n / 100).toFixed(2) + "s"); },
+            function(n){ return (n / 100).toFixed(2) + " s"; });
+
+/* ---- temas do palco ---- */
+var botoes = { claro:"bClaro", escuro:"bEscuro", xadrez:"bXadrez" };
+Object.keys(botoes).forEach(function(t){
+  document.getElementById(botoes[t]).addEventListener("click", function(){
+    raiz.dataset.tema = t;
+    Object.keys(botoes).forEach(function(o){
+      document.getElementById(botoes[o]).setAttribute("aria-pressed", o === t ? "true" : "false");
+    });
+    /* a letra e o rótulo acompanham o fundo; o traço é sempre o azul da marca */
+    var claro = (t === "claro");
+    bz.style.setProperty("--bz-ink", claro ? "#141a24" : "#f2f7ff");
+    bz.style.setProperty("--bz-txt-dim", claro ? "rgba(20,26,36,.28)"  : "rgba(226,238,255,.24)");
+    bz.style.setProperty("--bz-txt-hi",  claro ? "rgba(20,26,36,.82)"  : "rgba(226,238,255,.88)");
+    ov.style.setProperty("--bz-veil",
+      t === "xadrez" ? "transparent" : veu(+document.getElementById("rVeil").value));
+  });
+});
+
+/* ---- o pulso do "b" (e o halo) liga ou desliga ---- */
+document.getElementById("bPulso").addEventListener("click", function(){
+  var desligado = bz.classList.toggle("sem-pulso");
+  this.setAttribute("aria-pressed", desligado ? "false" : "true");
+});
+
+/* ---- o rótulo "Carregando…" entra ou sai ---- */
+document.getElementById("bRotulo").addEventListener("click", function(){
+  var txt = bz.querySelector(".bz-txt");
+  var vai = txt.style.display === "none";
+  txt.style.display = vai ? "" : "none";
+  this.setAttribute("aria-pressed", vai ? "true" : "false");
+});
+
+/* abre direto num tema pela URL: loader-b.html#escuro | #xadrez */
+var pedido = location.hash.replace("#", "");
+if (botoes[pedido]) { document.getElementById(botoes[pedido]).click(); }
+
+/* ---- rever a saída do símbolo: recria o nó para zerar as animações ---- */
+document.getElementById("bReplay").addEventListener("click", function(){
+  var novo = bz.cloneNode(true);
+  bz.replaceWith(novo);
+  bz = novo;
+  document.getElementById("rSize").dispatchEvent(new Event("input"));
+  document.getElementById("rRit").dispatchEvent(new Event("input"));
+  document.getElementById("rSai").dispatchEvent(new Event("input"));
+  document.getElementById("rPul").dispatchEvent(new Event("input"));
+  document.getElementById("rSkl").dispatchEvent(new Event("input"));
+});
+
+/* ==========================================================================
+   COPIAR O LOADER
+   Monta o componente inteiro — o CSS (só a parte de cima do <style>, nunca a
+   demonstração), a geometria da marca e o markup — com os valores do painel
+   já gravados dentro, para colar direto no sistema.
+   ========================================================================== */
+
+var QL = String.fromCharCode(10);        /* quebra de linha do código montado */
+
+/* o CSS do componente termina onde começa o aviso da demonstração */
+function cssDoComponente(){
+  var css = document.querySelector("style").textContent;
+  var fim = css.indexOf("DAQUI PARA BAIXO");
+  return css.slice(0, css.lastIndexOf("/*", fim)).replace(/\s+$/, "");
+}
+
+function valores(){
+  var num = function(id){ return +document.getElementById(id).value; };
+  var turn = num("rRit") / 100, sai = num("rSai") / 100;
+  var d  = 2.7208 * sai / turn;
+  var y2 = Math.min(.9, Math.max(0, 1 - .5 * d));
+  var x2 = 1 - (1 - y2) / d;
+  var lido = function(v){ return getComputedStyle(bz).getPropertyValue(v).trim(); };
+  return {
+    size: num("rSize") + "px",
+    turn: turn.toFixed(2) + "s",
+    saida: sai.toFixed(2) + "s",
+    pulso: (num("rPul") / 100).toFixed(2) + "s",
+    skel:  (num("rSkl") / 100).toFixed(2) + "s",
+    ink:   lido("--bz-ink") || "#141a24",
+    dim:   bz.style.getPropertyValue("--bz-txt-dim").trim(),
+    hi:    bz.style.getPropertyValue("--bz-txt-hi").trim(),
+    blur:  num("rBlur") + "px",
+    veu:   ov.style.getPropertyValue("--bz-veil").trim() ||
+           "rgba(255,255,255," + (num("rVeil") / 100) + ")",
+    ease:  "cubic-bezier(.42,.02," + x2.toFixed(4) + "," + y2.toFixed(4) + ")"
+  };
+}
+
+/* troca o valor de uma variável preservando o que vier depois do ";",
+   que é onde moram os comentários. Devolve a linha em que mexeu. */
+function trocarVar(linhas, nome, valor){
+  for (var i = 0; i < linhas.length; i++){
+    var p = linhas[i].indexOf("--" + nome + ":");
+    if (p < 0) continue;
+    var fim = linhas[i].indexOf(";", p);
+    if (fim < 0) continue;
+    linhas[i] = linhas[i].slice(0, p) + "--" + nome + ":" + valor + linhas[i].slice(fim);
+    return i;
+  }
+  return -1;
+}
+
+function montarCodigo(){
+  var v = valores(), linhas = cssDoComponente().split(QL);
+
+  /* os ajustes do painel entram no lugar dos valores de fábrica */
+  trocarVar(linhas, "bz-size",  v.size);
+  trocarVar(linhas, "bz-ink",   v.ink);
+  trocarVar(linhas, "bz-turn",  v.turn);
+  trocarVar(linhas, "bz-in",    v.saida);
+  trocarVar(linhas, "bz-pulso", v.pulso);
+  var iSkel = trocarVar(linhas, "bz-skel", v.skel);
+
+  /* as cores do rótulo só entram se o tema tiver mexido nelas */
+  if (v.dim && v.hi && iSkel >= 0){
+    linhas.splice(iSkel + 1, 0,
+      "  --bz-txt-dim:" + v.dim + ";",
+      "  --bz-txt-hi:"  + v.hi  + ";");
+  }
+  var css = linhas.join(QL);
+
+  /* o véu e o desfoque moram no overlay. Troca literal: o valor tem
+     parênteses (rgba) e um regex pararia no primeiro fecha-parêntese. */
+  css = css.split("var(--bz-veil, rgba(255,255,255,.62))")
+           .join("var(--bz-veil, " + v.veu + ")");
+  css = css.split("blur(var(--bz-blur,5px))")
+           .join("blur(var(--bz-blur," + v.blur + "))");
+
+  /* o ease da saída acompanha --bz-in e --bz-turn: já vai recalculado */
+  css = css.replace(/(animation:bzCobra var\(--bz-in\) )cubic-bezier\([^)]*\)/, "$1" + v.ease);
+
+  /* geometria da marca: o path da letra e o gradiente do traço */
+  var defs = document.querySelector("svg[width='0']").outerHTML;
+
+  /* markup limpo: sem os id e sem os style que o painel injeta */
+  var no = ov.cloneNode(true);
+  no.removeAttribute("id");
+  no.removeAttribute("style");
+  var box = no.querySelector(".bz-box");
+  box.removeAttribute("id");
+  if (!rotuloVisivel()){
+    var p = box.querySelector(".bz-txt");
+    if (p) p.parentNode.removeChild(p);
+  }
+  var sujos = no.querySelectorAll("[style]");
+  for (var i = 0; i < sujos.length; i++) sujos[i].removeAttribute("style");
+
+  return [
+    "<!-- ==========================================================",
+    "     BITZ · LOADER DO SISTEMA",
+    "     Ajustado em: tamanho " + v.size + " · volta " + v.turn +
+      " · saída " + v.saida,
+    "                  pulso do \"b\" " + v.pulso + " · pulso do rótulo " + v.skel,
+    "     O componente não desenha fundo: quem o dá é o .bz-overlay.",
+    "     ========================================================== -->",
+    "",
+    "<style>",
+    css,
+    "</style>",
+    "",
+    "<!-- geometria da marca (recortada do vetor original) -->",
+    defs,
+    "",
+    "<!-- o loader -->",
+    no.outerHTML,
+    ""
+  ].join(QL);
+}
+
+function rotuloVisivel(){
+  var p = bz.querySelector(".bz-txt");
+  return !!p && p.style.display !== "none";
+}
+
+/* ---- o botão ---- */
+document.getElementById("bCopiar").addEventListener("click", function(){
+  var botao = this, codigo = montarCodigo(), saida = document.getElementById("saida");
+
+  function avisar(txt, mostrarCampo){
+    botao.textContent = txt;
+    setTimeout(function(){ botao.textContent = "Copiar o loader"; }, 1800);
+    if (mostrarCampo){
+      saida.value = codigo;
+      saida.hidden = false;
+      saida.focus();
+      saida.select();
+    }
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(codigo).then(
+      function(){ avisar("Copiado!", false); },
+      function(){ avisar("Copie daqui ↓", true); }
+    );
+    return;
+  }
+  /* navegador antigo, ou página aberta sem contexto seguro */
+  try {
+    saida.value = codigo;
+    saida.hidden = false;
+    saida.select();
+    var ok = document.execCommand("copy");
+    saida.hidden = ok;
+    avisar(ok ? "Copiado!" : "Copie daqui ↓", !ok);
+  } catch (e){
+    avisar("Copie daqui ↓", true);
+  }
+});
+
+/* ---- mostrar / ocultar ---- */
+document.getElementById("bToggle").addEventListener("click", function(){
+  var visivel = ov.style.display !== "none";
+  ov.style.display = visivel ? "none" : "";
+  this.textContent = visivel ? "Mostrar" : "Ocultar";
+  this.setAttribute("aria-pressed", visivel ? "false" : "true");
+});
+</script>
+</body>
+</html>
