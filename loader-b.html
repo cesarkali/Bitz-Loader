@@ -66,18 +66,22 @@
   position:absolute; inset:0; z-index:50;
   display:grid; place-items:center;
   background:var(--bz-veil, rgba(255,255,255,.62));
-  -webkit-backdrop-filter:blur(var(--bz-blur,5px)) saturate(.92);
-          backdrop-filter:blur(var(--bz-blur,5px)) saturate(.92);
+  /* backdrop-filter removido: era o maior custo de GPU do loader (blur em
+     tela cheia, recalculado o tempo todo em que o overlay fica visível) */
   animation:bzVeil .3s ease both;
 }
 @keyframes bzVeil{ from{opacity:0} to{opacity:1} }
 
+/* fade-out ao fechar — ver o handler do botão "Ocultar o loader" no script */
+.bz-overlay.bz-closing{ animation:bzVeilOut .3s ease forwards; }
+@keyframes bzVeilOut{ from{opacity:1} to{opacity:0} }
+
 .bz-box{
   /* ---- ajustes ---- */
-  --bz-size:140px;        /* única medida: tudo deriva daqui */
+  --bz-size:106px;        /* única medida: tudo deriva daqui */
   --bz-ink:#141a24;       /* cor da letra "b" */
-  --bz-turn:2.8s;         /* um ciclo: volta do anel + corrimento da cauda */
-  --bz-in:1.05s;          /* a saída do símbolo, uma vez só */
+  --bz-turn:1.50s;         /* um ciclo: volta do anel + corrimento da cauda */
+  --bz-in:1.10s;          /* a saída do símbolo, uma vez só */
   --bz-pulso:1.4s;        /* respiro do "b" e do halo — independente do traço */
   --bz-skel:1.9s;         /* varredura do rótulo — independente do traço */
 
@@ -92,7 +96,11 @@
 /* ---------- halo azul que respira atrás da letra ---------- */
 .bz-halo{
   position:absolute; left:50%; top:50%;
-  width:.56em; height:.56em; margin:-.28em 0 0 -.28em;
+  /* margin-top reduzido em .0442em para descer o halo: a tinta da letra "b"
+     não é centralizada na própria caixa (o "peso" visual do traço fica mais
+     acima do centro geométrico onde o anel gira), então sem esse ajuste o
+     conjunto letra+halo fica puxado pra cima em relação ao anel */
+  width:.56em; height:.56em; margin:-.2358em 0 0 -.28em;
   border-radius:50%;
   background:radial-gradient(circle at 50% 50%,
       rgba(0,87,217,.30) 0%, rgba(0,87,217,.16) 40%, rgba(0,87,217,0) 70%);
@@ -112,23 +120,37 @@
   stroke-width:23.84;             /* a espessura do corpo do símbolo */
   stroke-linecap:round;
   stroke-linejoin:round;
-}
-/* o mesmo traço, largo e desfocado: é o que dá corpo de líquido */
-.bz-glow{
-  stroke:rgba(59,134,255,.32);
-  stroke-width:40;
-  filter:blur(.022em);
+  /* glow via drop-shadow estático no próprio traço, em vez de um segundo
+     <path>/<circle> duplicado só pra ficar borrado atrás — metade dos
+     elementos SVG animados/repintados por frame */
+  filter:drop-shadow(0 0 .028em rgba(59,134,255,.55));
 }
 
 /* ==========================================================================
    FASE 1 — A SAÍDA
    O traço corre pelo trilho. Um dash só: a cauda passa onde a cabeça passou.
+
+   O ponto de partida (M/L do início do "d" no markup, mais o primeiro ponto
+   de controle da curva seguinte) foi descido 19,5 unidades em relação à
+   espinha original do vetor. Não é um ajuste visual solto: medido no
+   bitz-logo-vetorizado.svg original, o símbolo azul (o path
+   "M181.14,297.88...Z" ao lado da letra) tem centro em y≈290,05 — bem
+   próximo da espinha original (289,93). Mas a letra "b" (.bz-letter,
+   acima) foi descida 19,44 unidades via margin-top pra compensar a tinta
+   dela não ser centralizada na própria caixa, e o traço não acompanhava
+   esse deslocamento (ele é posicionado direto pelas coordenadas do vetor,
+   sem o mesmo truque de CSS) — por isso ficava visualmente alto demais em
+   relação à letra já deslocada. Os 19,5 daqui = ~0,25 (a pequena diferença
+   entre a espinha e o centro real do símbolo) + 19,44 (pra acompanhar o
+   deslocamento da letra). Só esses três pontos moveram, na mesma
+   quantidade cada um (preserva a tangente entre a reta e a curva); o resto
+   da curva, o arco e a órbita (r=170) continuam exatamente como estavam.
    ========================================================================== */
 .bz-rail{ position:absolute; inset:0 }
 .bz-rail path{
   stroke-dasharray:151.45 1000;   /* 151,45/1000 do trilho = os 82,16 do símbolo */
   stroke-dashoffset:0;
-  animation:bzCobra var(--bz-in) cubic-bezier(.42,.02,.5,.49) forwards;
+  animation:bzCobra var(--bz-in) cubic-bezier(.42,.02,.5,.0024) forwards;
 }
 /* O ease é calculado, não escolhido: a cauda tem de chegar ao fim exatamente
    na velocidade com que a órbita a recebe — que agora é a da volta pura,
@@ -152,7 +174,12 @@
    .bz-car    a cauda corre (linear) enquanto o vão respira
    ========================================================================== */
 .bz-lead,.bz-ring{ position:absolute; inset:0; transform-origin:50% 50% }
-.bz-lead{ transform:rotate(275.22deg) }
+/* a tinta da letra "b" também pesa um pouco pra esquerda dentro da própria
+   caixa (mesmo motivo do ajuste vertical do halo/letra acima) — por isso a
+   órbita, perfeitamente centralizada, sobrava mais espaço à direita da letra
+   do que à esquerda. Desloca só a órbita (fase 2); a fase 1 (.bz-rail, o
+   traço que nasce igual à letra) continua exatamente como estava. */
+.bz-lead{ transform:translateX(-.0305em) rotate(275.22deg) }
 .bz-ring{
   opacity:0;
   animation:bzEntra .08s linear forwards,
@@ -197,22 +224,10 @@
   0%,100%{ stroke-width:23.84 }
   50%    { stroke-width:14.5 }
 }
-/* o corpo desfocado arrasta um pouco atrás, como massa que demora a virar */
-.bz-ring .bz-glow{
-  animation:bzCorre   var(--bz-turn) ease-in-out infinite,
-            bzRespira var(--bz-turn) ease-in-out infinite,
-            bzMassaGlow var(--bz-turn) ease-in-out infinite;
-  animation-delay:calc(var(--bz-in) + .07s), calc(var(--bz-in) + .07s), calc(var(--bz-in) + .07s);
-}
-@keyframes bzMassaGlow{
-  0%,100%{ stroke-width:40 }
-  50%    { stroke-width:26 }
-}
-
 /* ---------- a letra "b" ---------- */
 .bz-letter{
   position:absolute; left:50%; top:50%;
-  width:.56818em; height:.56818em; margin:-.28409em 0 0 -.28409em;
+  width:.56818em; height:.56818em; margin:-.2399em 0 0 -.28409em;
   transform-origin:50% 50%;
   animation:bzBeat var(--bz-pulso) ease-in-out infinite;
 }
@@ -249,6 +264,17 @@
   .bz-ring{ opacity:1; animation:bzGira 6s linear infinite !important }
   .bz-car{ stroke-dasharray:26 74; animation:none !important }
 }
+
+/* ---------- modo leve (hardware fraco) ----------
+   Mesma redução de cima, só que acionada por classe (.bz-lite em .bz-box)
+   via JS, para não depender do usuário ter ligado a opção de "reduzir
+   movimento" no sistema operacional. */
+.bz-box.bz-lite .bz-halo,
+.bz-box.bz-lite .bz-letter,
+.bz-box.bz-lite .bz-txt{ animation:none !important }
+.bz-box.bz-lite .bz-rail{ opacity:0; animation:none !important }
+.bz-box.bz-lite .bz-ring{ opacity:1; animation:bzGira 6s linear infinite !important }
+.bz-box.bz-lite .bz-car{ stroke-dasharray:26 74; animation:none !important }
 
 /* ==========================================================================
    DAQUI PARA BAIXO É SÓ A PÁGINA DE DEMONSTRAÇÃO.
@@ -405,15 +431,13 @@ html[data-tema="xadrez"] .nota{ border-color:#1e2b45; color:#7f92b3 }
 
         <!-- FASE 1: o traço nasce no formato do símbolo e corre pelo trilho -->
         <svg class="bz-rail" viewBox="109.16 87.33 440 440" aria-hidden="true">
-          <path class="bz-tr bz-glow" pathLength="1000" d="M275.08,289.36 L192.92,290.50 C132.93,289.67 111.29,189.71 285.16,143.12 A170.00,170.00 0 0,1 469.73,211.72"/>
-          <path class="bz-tr"         pathLength="1000" d="M275.08,289.36 L192.92,290.50 C132.93,289.67 111.29,189.71 285.16,143.12 A170.00,170.00 0 0,1 469.73,211.72"/>
+          <path class="bz-tr" pathLength="1000" d="M275.08,308.86 L192.92,310.00 C132.93,309.17 111.29,189.71 285.16,143.12 A170.00,170.00 0 0,1 469.73,211.72"/>
         </svg>
 
         <!-- FASE 2: a mesma forma, agora em órbita sem fim -->
         <div class="bz-lead"><div class="bz-ring">
           <svg viewBox="109.16 87.33 440 440" aria-hidden="true">
-            <circle class="bz-tr bz-car bz-glow" cx="329.16" cy="307.33" r="170" pathLength="100"/>
-            <circle class="bz-tr bz-car"         cx="329.16" cy="307.33" r="170" pathLength="100"/>
+            <circle class="bz-tr bz-car" cx="329.16" cy="307.33" r="170" pathLength="100"/>
           </svg>
         </div></div>
 
@@ -434,24 +458,20 @@ html[data-tema="xadrez"] .nota{ border-color:#1e2b45; color:#7f92b3 }
   </h1>
 
   <div class="campo">
-    <label>Tamanho <b id="vSize">140 px</b></label>
-    <input type="range" id="rSize" min="90" max="280" step="2" value="140">
-  </div>
-  <div class="campo">
-    <label>Desfoque do fundo <b id="vBlur">5 px</b></label>
-    <input type="range" id="rBlur" min="0" max="16" step="1" value="5">
+    <label>Tamanho <b id="vSize">106 px</b></label>
+    <input type="range" id="rSize" min="90" max="280" step="2" value="106">
   </div>
   <div class="campo">
     <label>Opacidade do véu <b id="vVeil">62 %</b></label>
     <input type="range" id="rVeil" min="0" max="95" step="1" value="62">
   </div>
   <div class="campo">
-    <label>Volta do traço <b id="vRit">2.80 s</b></label>
-    <input type="range" id="rRit" min="150" max="600" step="10" value="280">
+    <label>Volta do traço <b id="vRit">1.50 s</b></label>
+    <input type="range" id="rRit" min="150" max="600" step="10" value="150">
   </div>
   <div class="campo">
-    <label>Tempo da saída <b id="vSai">1.05 s</b></label>
-    <input type="range" id="rSai" min="50" max="220" step="5" value="105">
+    <label>Tempo da saída <b id="vSai">1.10 s</b></label>
+    <input type="range" id="rSai" min="50" max="220" step="5" value="110">
   </div>
   <div class="campo">
     <label>Pulso do &ldquo;b&rdquo; <b id="vPul">1.40 s</b></label>
@@ -477,6 +497,9 @@ html[data-tema="xadrez"] .nota{ border-color:#1e2b45; color:#7f92b3 }
   <div class="linha">
     <button id="bToggle" aria-pressed="true">Ocultar o loader</button>
   </div>
+  <div class="linha">
+    <button id="bLite" aria-pressed="false">Simular hardware fraco</button>
+  </div>
 
   <div class="linha">
     <button id="bCopiar" class="destaque">Copiar o loader</button>
@@ -488,11 +511,14 @@ html[data-tema="xadrez"] .nota{ border-color:#1e2b45; color:#7f92b3 }
   <p class="nota">
     Para levar ao sistema, copie o bloco <code>.bz-overlay</code> / <code>.bz-box</code>
     do topo do arquivo, o markup do loader e os <code>&lt;defs&gt;</code> (o path da
-    letra e o gradiente). O componente não desenha fundo: quem o dá é o
-    <code>.bz-overlay</code>, com <code>backdrop-filter</code>. A letra usa
+    letra e o gradiente). O componente não desenha fundo: quem o dá é o véu do
+    <code>.bz-overlay</code> (sem <code>backdrop-filter</code> — foi removido de
+    propósito, era o maior custo de GPU do loader). A letra usa
     <code>currentColor</code> — basta acertar <code>--bz-ink</code>. Se mexer em
     <code>--bz-in</code> ou <code>--bz-turn</code> fora daqui, refaça o ease da
-    saída pela fórmula que está junto do <code>@keyframes bzCobra</code>.
+    saída pela fórmula que está junto do <code>@keyframes bzCobra</code>. O
+    glow do traço é <code>filter:drop-shadow()</code> direto no <code>.bz-tr</code>
+    — não duplique o path/circle pra simular brilho, isso dobra o repaint por frame.
   </p>
 </aside>
 
@@ -529,7 +555,6 @@ function liga(id, alvo, fim){
   aplicar();
 }
 liga("Size", function(n){ bz.style.setProperty("--bz-size", n + "px"); }, function(n){ return n + " px"; });
-liga("Blur", function(n){ ov.style.setProperty("--bz-blur", n + "px"); }, function(n){ return n + " px"; });
 liga("Veil", function(n){ ov.style.setProperty("--bz-veil", veu(n)); },   function(n){ return n + " %"; });
 /* Volta e saída mexem no mesmo ajuste: o ease da saída tem de continuar
    entregando a cauda na velocidade da órbita, senão a emenda ganha um degrau.
@@ -637,7 +662,6 @@ function valores(){
     ink:   lido("--bz-ink") || "#141a24",
     dim:   bz.style.getPropertyValue("--bz-txt-dim").trim(),
     hi:    bz.style.getPropertyValue("--bz-txt-hi").trim(),
-    blur:  num("rBlur") + "px",
     veu:   ov.style.getPropertyValue("--bz-veil").trim() ||
            "rgba(255,255,255," + (num("rVeil") / 100) + ")",
     ease:  "cubic-bezier(.42,.02," + x2.toFixed(4) + "," + y2.toFixed(4) + ")"
@@ -677,12 +701,10 @@ function montarCodigo(){
   }
   var css = linhas.join(QL);
 
-  /* o véu e o desfoque moram no overlay. Troca literal: o valor tem
-     parênteses (rgba) e um regex pararia no primeiro fecha-parêntese. */
+  /* o véu mora no overlay. Troca literal: o valor tem parênteses (rgba) e
+     um regex pararia no primeiro fecha-parêntese. */
   css = css.split("var(--bz-veil, rgba(255,255,255,.62))")
            .join("var(--bz-veil, " + v.veu + ")");
-  css = css.split("blur(var(--bz-blur,5px))")
-           .join("blur(var(--bz-blur," + v.blur + "))");
 
   /* o ease da saída acompanha --bz-in e --bz-turn: já vai recalculado */
   css = css.replace(/(animation:bzCobra var\(--bz-in\) )cubic-bezier\([^)]*\)/, "$1" + v.ease);
@@ -690,12 +712,17 @@ function montarCodigo(){
   /* geometria da marca: o path da letra e o gradiente do traço */
   var defs = document.querySelector("svg[width='0']").outerHTML;
 
-  /* markup limpo: sem os id e sem os style que o painel injeta */
+  /* markup limpo: sem os id e sem os style que o painel injeta, e sem as
+     classes de estado transitório (fade-out em andamento / simulação de
+     hardware fraco) — o sistema aplica isso sozinho em tempo real, não faz
+     sentido exportar travado num desses estados */
   var no = ov.cloneNode(true);
   no.removeAttribute("id");
   no.removeAttribute("style");
+  no.classList.remove("bz-closing");
   var box = no.querySelector(".bz-box");
   box.removeAttribute("id");
+  box.classList.remove("bz-lite");
   if (!rotuloVisivel()){
     var p = box.querySelector(".bz-txt");
     if (p) p.parentNode.removeChild(p);
@@ -765,12 +792,54 @@ document.getElementById("bCopiar").addEventListener("click", function(){
   }
 });
 
-/* ---- mostrar / ocultar ---- */
+/* ---- mostrar / ocultar (com fade-out, em vez de sumir seco) ---- */
 document.getElementById("bToggle").addEventListener("click", function(){
+  var botao = this;
   var visivel = ov.style.display !== "none";
-  ov.style.display = visivel ? "none" : "";
-  this.textContent = visivel ? "Mostrar" : "Ocultar";
-  this.setAttribute("aria-pressed", visivel ? "false" : "true");
+
+  if (visivel){
+    ov.classList.add("bz-closing");
+    var finish = function(){
+      ov.removeEventListener("animationend", finish);
+      clearTimeout(fallback);
+      ov.classList.remove("bz-closing");
+      ov.style.display = "none";
+    };
+    ov.addEventListener("animationend", finish);
+    var fallback = setTimeout(finish, 400);
+  } else {
+    ov.classList.remove("bz-closing");
+    ov.style.display = "";
+  }
+
+  botao.textContent = visivel ? "Mostrar" : "Ocultar";
+  botao.setAttribute("aria-pressed", visivel ? "false" : "true");
+});
+
+/* ---- detecta hardware fraco (poucos núcleos / pouca memória) e aplica a
+   mesma redução de animações que já existe para prefers-reduced-motion, sem
+   depender do usuário ter ligado essa opção no sistema operacional.
+   navigator.deviceMemory não existe em todo navegador (ex: Safari) — se a
+   API não existir, esse critério simplesmente não pesa na decisão. ---- */
+(function () {
+  var cores = navigator.hardwareConcurrency;
+  var memoria = navigator.deviceMemory;
+  var hardwareFraco =
+    (typeof cores === "number" && cores <= 2) ||
+    (typeof memoria === "number" && memoria <= 2);
+
+  if (hardwareFraco) {
+    bz.classList.add("bz-lite");
+    var bLite = document.getElementById("bLite");
+    bLite.setAttribute("aria-pressed", "true");
+    bLite.textContent = "Hardware fraco detectado";
+  }
+})();
+
+/* ---- botão pra simular o modo leve manualmente, sem precisar de um PC fraco de verdade ---- */
+document.getElementById("bLite").addEventListener("click", function(){
+  var ligado = bz.classList.toggle("bz-lite");
+  this.setAttribute("aria-pressed", ligado ? "true" : "false");
 });
 </script>
 </body>
